@@ -7,7 +7,7 @@ It does not edit files. It does not change data on the site.
 
 1. Get the URL. If the product has more than one surface, list them: the marketing site, the documentation, the API, the app.
 2. Choose a profile for each surface: `content`, `api`, `webapp`, or `commerce`.
-3. Tell the user what the audit does: a maximum of 80 read-only requests for each surface from the scanner, and a maximum of 15 from the journey.
+3. Tell the user what the audit does. The scanner sends a maximum of 80 requests for each surface. All of them only read data, and one of them is a `POST` of `server/discover` to `/mcp`. The journey sends a maximum of 15 requests.
 4. If the user is not the owner of the site, keep to public pages and do not test credentials.
 
 ## 2. Run the scanner
@@ -22,10 +22,10 @@ Keep the JSON report. If the exit code is 4, the target gave no usable response.
 
 The scanner cannot measure the checks in the `review` list of the report. Assess each one with evidence.
 
-1. Get the rubrics: `node <skill-dir>/scripts/ax.mjs catalog --json`. Use the checks with `"bucket": "review"`.
+1. Get the rubrics: `node <skill-dir>/scripts/ax.mjs catalog --json`. Use the checks in the `review` list of the report.
 2. Look for public evidence: the documentation, the signup page, the pricing page, the OpenAPI file, the error responses.
 3. Look only. Do not submit a form, and do not create an account.
-4. Give each check one result from its rubric: `pass`, `partial`, `fail`, or `unknown`.
+4. Give each check one result from its rubric: `pass`, `partial`, `fail`, `n/a`, or `unknown`. Use `n/a` only when the check cannot apply, and give the reason.
 5. Give the evidence: a URL and a short quote, or the request and the response.
 
 If the user gave access to the codebase, read the code too. Evidence from code is stronger than evidence from documentation.
@@ -58,7 +58,7 @@ Do the stages in order. Give each stage one result.
 |---|---|---|
 | Reach | Request the domain. | You get the content with no challenge. |
 | Discover | Find the resource for the task. Try `llms.txt`, the `Link` headers, the sitemap, and the API catalog before you guess a URL. | A pointer from the site leads you to the resource in 3 requests or fewer. |
-| Read | Read the resource. | The answer is in the response, in text, with no JavaScript. |
+| Read | Read the resource. For an API, the resource is its documentation or its API description. | The answer is in the response, in text, with no JavaScript. |
 | Authorize | Find how an agent gets credentials. Read, do not sign up. | The documentation shows a path with no human step. |
 | Act | Find the exact request for the task. For a public read operation, send one `GET`. | The API description or the documentation gives the full request. |
 | Recover | Request one wrong path, or send one invalid parameter to a read operation. | The error says what is wrong and how to correct it. |
@@ -70,8 +70,12 @@ A stage that does not apply gets the result `n/a`. Example: a content site has n
 | Result | Meaning |
 |---|---|
 | `clear` | The first attempt worked, with a pointer that the site gave. |
-| `friction` | The task worked, but with a guess, more than 3 requests, a large payload with little content, or a step made for humans. |
-| `blocked` | An agent with no human and no JavaScript cannot continue. |
+| `friction` | The stage worked, but with a guess, more than 3 requests, a large payload with little content, or a step made for humans. |
+| `blocked` | No pointer from the site and no reasonable guess worked. An agent with no human and no JavaScript cannot continue. |
+| `not reached` | An earlier stage is `blocked`, so the agent cannot try this stage from what the site gave. |
+
+Give the result for each stage, not for the full task. A guess that works is `friction`, not `clear`.
+If you know a path from outside the site, do not use it. Record the stage as `blocked` or `not reached`.
 
 ### The journey log
 

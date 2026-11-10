@@ -50,10 +50,10 @@ Do not start work from the menu.
 
 These rules are stronger than the reference files.
 
-1. **Confirm before you edit.** Show the list of changes. Edit only after the user agrees.
-2. **Stay read-only on a live site.** Send only requests that read data. Do not create an account, submit a form, or buy something. The owner of the site can approve an exception in plain words.
+1. **Confirm before you edit.** Get the agreement of the user two times. First, agree on the gaps to close. Then read the playbooks, and show the exact files that you will change. Edit only after the second agreement.
+2. **Stay read-only on a live site.** Send only requests that read data. Do not create an account, submit a form, or buy something. The owner of the site can approve an exception in plain words. The scanner sends one `POST`: a `server/discover` request to `/mcp`. That request reads data only.
 3. **Ask before you use an external scanner.** A hosted scanner receives the URL. Get consent first.
-4. **Protect security.** Do not disable bot protection, open CORS for private data, or expose private content to increase a score. Each playbook has security notes. Obey them.
+4. **Protect security.** Do not disable bot protection, open CORS for private data, or expose private content to increase a score. Each playbook has security notes. Obey them. If a human page has a CAPTCHA, keep it. Add a separate path for agents, for example keys from an API, with abuse controls.
 5. **Respect the bot policy of the owner.** A block on AI training crawlers is a valid decision. Do not change it unless the user asks.
 6. **Check the date of a standard.** Each playbook has a `Reviewed` date. If that date is more than 6 months old, read the primary source before you implement.
 7. **Report the truth.** Show the score, the coverage, and each check that the scanner did not assess. Do not show an unassessed check as a pass.
@@ -89,8 +89,8 @@ A profile tells the scanner which checks apply. Give the profile with `--profile
 A product can have more than one surface. Scan each surface with its own profile.
 Example: scan `example.com` as `content`, and scan `api.example.com` as `api`.
 
-For an API, give the base URL of the API, for example `https://example.com/api/v1`.
-The scanner looks for the API description at the well-known locations of the host and beside the base URL.
+For an API, give the URL that answers for the whole API. If the host root answers with the API, use the host root. If the API is below a path such as `/api/v1`, and the host root serves something else, use that path.
+The scanner looks for the API description at the well-known locations of the host and beside the URL that you give.
 
 ## How to read the scanner output
 
@@ -106,10 +106,18 @@ The JSON report has three buckets of checks.
 - `coverage` shows how much of the score the scanner could assess. A timeout decreases it.
 - `grade` is `null` when `score` and `upperBound` are in different grade bands.
 - `cap` is set when a gate fails. A gate fails when a plain request gets a bot challenge, or when the page has no content without JavaScript. The cap is 59.
-- `opportunities` lists the points that each fix can add, largest first.
+- `opportunities` lists the points that each fix can add, largest first. It has all the gaps. The text output shows only the first 8.
 - Each check has a `playbook`. That is the reference file with the fix.
+- A check with `blockedBy` failed because another check failed first. Its status is `fail`, not `not_assessed`, so it does not decrease the coverage. Fix the check in `blockedBy` first.
+- `review` lists the Review checks that apply to the profile. Assess only these.
+
+Without `--json`, the scanner prints a short text report with the score line and the pillar line. Use the text report for the user, and the JSON for your work.
 
 Exit codes: 0 ok, 1 gate failed, 2 usage error, 3 gate inconclusive, 4 no score, 5 internal error.
+
+`node <skill-dir>/scripts/ax.mjs catalog --json` prints the catalog. Each entry of its `checks` array has a `bucket`. A Review check also has a `rubric` with the members `pass`, `partial`, `fail`, and `evidence`.
+
+Keep a JSON report in the conversation, or in a temporary directory outside the project. Do not write it into the project unless the user asks.
 
 For the formula, read [references/scoring.md](references/scoring.md). For the list of checks, read [references/checks.md](references/checks.md).
 
