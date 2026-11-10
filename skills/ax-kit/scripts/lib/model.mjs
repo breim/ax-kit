@@ -6,6 +6,10 @@ export const USER_AGENT = `ax-kit/${SCANNER_VERSION}`;
 export const PROFILES = ['content', 'api', 'webapp', 'commerce'];
 export const PILLARS = ['reach', 'discover', 'read', 'act', 'authorize', 'recover', 'transact'];
 
+export const ALL_PROFILES = PROFILES;
+export const PAGE_PROFILES = ['content', 'webapp', 'commerce'];
+export const API_PROFILES = ['api', 'webapp'];
+
 export const TIER_WEIGHT = { essential: 4, recommended: 2, optional: 1 };
 
 export const PILLAR_WEIGHT = {
