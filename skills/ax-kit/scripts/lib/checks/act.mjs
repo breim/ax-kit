@@ -1,6 +1,8 @@
 import { blocksOf, loadEntryDoc, tagsOf } from '../context/html.mjs';
 import { MCP_PATH, MCP_REVISION, loadMcpProbe } from '../context/mcp-probe.mjs';
+import { loadMissingPage } from '../context/missing-page.mjs';
 import { loadOperations } from '../context/openapi-model.mjs';
+import { parseChallenges } from '../context/www-authenticate.mjs';
 import { API_PROFILES, PAGE_PROFILES } from '../model.mjs';
 import { reviewChecks } from './act-review.mjs';
 import { blocked, byRatio, fail, partial, pass, seen } from './result.mjs';
@@ -89,6 +91,9 @@ async function runSecurity(ctx) {
 
 const listed = (versions) => (versions.length > 0 ? `, and it lists ${versions.join(', ')}` : '');
 
+const UNAUTHORIZED = 401;
+const MCP_BLANKET_CHALLENGE = `The server asks for credentials on each path, so the answer at ${MCP_PATH} does not show an MCP server. Add a resource_metadata parameter to the challenge.`;
+
 const MCP_VERDICTS = {
   modern: ({ versions }) => pass(`An MCP server at ${MCP_PATH} answers server/discover and supports the protocol versions ${versions.join(', ')}.`),
   authorization: () => pass(`The MCP endpoint at ${MCP_PATH} asks for authorization with a WWW-Authenticate header.`),
@@ -101,10 +106,21 @@ const MCP_VERDICTS = {
   absent: () => fail(`No MCP server answers a server/discover request at ${MCP_PATH}.`),
 };
 
+const namesResourceMetadata = (snapshot) =>
+  parseChallenges(snapshot.headers['www-authenticate']).some((challenge) => 'resource_metadata' in challenge.params);
+
+// A server that answers 401 on each path gives no evidence of an MCP server at this path.
+// The resource_metadata parameter of the MCP authorization specification is the evidence in that case.
+async function asksForCredentialsEverywhere(ctx, probe) {
+  if (probe.kind !== 'authorization' || namesResourceMetadata(probe.snapshot)) return false;
+  return (await loadMissingPage(ctx)).status === UNAUTHORIZED;
+}
+
 async function runMcpEndpoint(ctx) {
   const probe = await loadMcpProbe(ctx);
-  const verdict = MCP_VERDICTS[probe.kind](probe);
-  return { ...verdict, evidence: [seen(probe.snapshot, `HTTP ${probe.snapshot.status}, ${probe.kind}`)] };
+  const evidence = [seen(probe.snapshot, `HTTP ${probe.snapshot.status}, ${probe.kind}`)];
+  if (await asksForCredentialsEverywhere(ctx, probe)) return fail(MCP_BLANKET_CHALLENGE, evidence);
+  return { ...MCP_VERDICTS[probe.kind](probe), evidence };
 }
 
 async function runWebmcp(ctx) {

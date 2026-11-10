@@ -2,6 +2,8 @@ import { LIMITS, USER_AGENT } from '../model.mjs';
 import { ALLOWED_METHODS, isAllowedUrl } from './host-policy.mjs';
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+// A redirect is followed only for a safe method, so the one POST of a scan is never sent two times.
+const FOLLOWED_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 const NO_BODY = { body: '', truncated: false };
 
 const failure = (request, error, redirects = []) => ({
@@ -42,7 +44,7 @@ async function requestOnce(url, request, fetchImpl) {
     signal: AbortSignal.timeout(LIMITS.timeoutMs),
   });
   const headers = Object.fromEntries(response.headers.entries());
-  if (REDIRECT_STATUSES.has(response.status) && headers.location) {
+  if (REDIRECT_STATUSES.has(response.status) && headers.location && FOLLOWED_METHODS.has(request.method)) {
     await response.body?.cancel();
     return { redirectTo: new URL(headers.location, url).href };
   }

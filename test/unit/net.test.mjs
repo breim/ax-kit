@@ -142,3 +142,12 @@ test('a method outside the allowed set is refused before any request', async () 
     assert.equal(site.hits.length, 0);
   });
 });
+
+test('a redirect is not followed for a POST, so the request is sent one time', async () => {
+  const routes = { 'POST /old': { status: 307, headers: { location: '/new' } }, 'POST /new': text('moved') };
+  await withSite(routes, async (site, ctx) => {
+    const snapshot = await ctx.fetch('/old', { method: 'POST', body: '{}' });
+    assert.deepEqual([snapshot.status, snapshot.redirects], [307, []]);
+    assert.deepEqual(site.hits.map((hit) => `${hit.method} ${hit.path}`), ['POST /old']);
+  });
+});

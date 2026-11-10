@@ -139,3 +139,15 @@ test('the review checks are not assessed by the scanner and have a rubric', asyn
     assert.equal(fixture.hits.length, 0, id);
   }
 });
+
+const BEARER = { status: 401, headers: { 'www-authenticate': 'Bearer realm="api"' }, body: '' };
+const WITH_METADATA = { status: 401, headers: { 'www-authenticate': 'Bearer resource_metadata="https://x.test/.well-known/oauth-protected-resource"' }, body: '' };
+const everywhere = (challenge) => ({ ...mcp(challenge), '/ax-kit-missing-page-7d1f3a9c': BEARER });
+
+test('a 401 on each path is evidence of an MCP server only with a resource_metadata parameter', async () => {
+  const blanket = await runCheckOn(everywhere(BEARER), 'act.mcp-endpoint', { profile: 'api' });
+  assert.equal(blanket.status, 'fail');
+  assert.match(blanket.result.summary, /asks for credentials on each path/);
+  assert.equal(await statusOf(everywhere(WITH_METADATA), 'act.mcp-endpoint', { profile: 'api' }), 'pass');
+  assert.equal(await statusOf(mcp(BEARER), 'act.mcp-endpoint', { profile: 'api' }), 'pass');
+});
