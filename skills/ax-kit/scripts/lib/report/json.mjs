@@ -27,7 +27,8 @@ function watchOf(entries) {
     adopted: idsWith((entry) => entry.status === 'pass' && entry.stability !== 'legacy'),
     absent: idsWith((entry) => entry.status === 'fail' && entry.stability !== 'legacy'),
     legacyFound: idsWith((entry) => entry.status === 'pass' && entry.stability === 'legacy'),
-    observations: idsWith((entry) => entry.status === 'info' || entry.status === 'partial'),
+    partial: idsWith((entry) => entry.status === 'partial'),
+    observations: idsWith((entry) => entry.status === 'info'),
   };
 }
 

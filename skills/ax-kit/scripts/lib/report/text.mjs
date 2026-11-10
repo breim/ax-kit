@@ -44,6 +44,7 @@ export function renderText(report) {
     ...listLine('Not assessed: ', report.coverage.notAssessed),
     ...listLine('Review (needs judgment, not scored): ', report.review),
     ...listLine('Watch, adopted: ', report.watch.adopted),
+    ...listLine('Watch, partly adopted: ', report.watch.partial),
     ...listLine('Watch, absent: ', report.watch.absent),
     ...listLine('Watch, legacy path found: ', report.watch.legacyFound),
     `Requests  ${report.requests.made} of ${report.requests.budget}`,

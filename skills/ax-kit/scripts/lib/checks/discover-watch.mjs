@@ -72,16 +72,22 @@ async function digestMatches(ctx, indexUrl, entry) {
   return { matches: snapshot.status === 200 && digest === entry.digest, snapshot };
 }
 
+// The scanner keeps a response body as text, so it can verify the digest of a text file only.
+const isTextSkill = (entry) => entry.type === 'skill-md';
+
 async function runAgentSkills(ctx) {
   const found = await firstJson(ctx, ['/.well-known/agent-skills/index.json', '/.well-known/skills/index.json'], hasSkills);
   if (!found.path) return fail('No Agent Skills index is at /.well-known/agent-skills/index.json.', found.evidence);
-  const current = found.value.$schema === SKILLS_SCHEMA && found.value.skills.every(isSkillEntry);
+  const { skills } = found.value;
+  const current = found.value.$schema === SKILLS_SCHEMA && skills.every(isSkillEntry);
   if (!current) return partial('The Agent Skills index does not follow version 0.2.0 of the discovery draft.', found.evidence);
-  const digest = await digestMatches(ctx, ctx.at(found.path), found.value.skills[0]);
+  const textSkill = skills.find(isTextSkill);
+  if (!textSkill) return pass(`The Agent Skills index lists ${skills.length} skills. The scanner does not verify the digest of an archive.`, found.evidence);
+  const digest = await digestMatches(ctx, ctx.at(found.path), textSkill);
   const evidence = [...found.evidence, seen(digest.snapshot, digest.matches ? 'digest matches' : 'digest differs')];
   return digest.matches
-    ? pass(`The Agent Skills index lists ${found.value.skills.length} skills with a correct digest.`, evidence)
-    : partial('The digest of the first skill does not match its file.', evidence);
+    ? pass(`The Agent Skills index lists ${skills.length} skills with a correct digest.`, evidence)
+    : partial(`The digest of the skill ${textSkill.name} does not match its file.`, evidence);
 }
 
 const isAgentCard = (card) => isJsonObject(card) && typeof card.name === 'string' && Array.isArray(card.supportedInterfaces);

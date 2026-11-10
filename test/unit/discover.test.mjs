@@ -243,3 +243,20 @@ test('an entry URL that names a file uses its directory, and the root entry adds
   assert.equal(root.paths.filter((path) => path.endsWith('openapi.json')).length, 3);
   assert.equal(root.paths.includes('/swagger.json'), true);
 });
+
+const archiveEntry = { name: 'kit', type: 'archive', description: 'A kit.', url: 'kit.tar.gz', digest: `sha256:${'a'.repeat(64)}` };
+
+test('the Agent Skills index does not verify the digest of an archive', async () => {
+  const index = { ...skillsIndex(), skills: [archiveEntry] };
+  const { result, site } = await runCheckOn({ '/.well-known/agent-skills/index.json': json(index) }, 'discover.agent-skills');
+  assert.equal(result.status, 'pass');
+  assert.match(result.summary, /does not verify the digest of an archive/);
+  assert.equal(site.hits.length, 1);
+});
+
+test('the Agent Skills index verifies the first text skill after an archive', async () => {
+  const mixed = (digest) => ({ ...skillsIndex(), skills: [archiveEntry, { ...skillsIndex().skills[0], digest }] });
+  assert.equal(await statusOf(skillsSite(mixed(digestOf(SKILL))), 'discover.agent-skills'), 'pass');
+  const wrong = await runCheckOn(skillsSite(mixed(`sha256:${'0'.repeat(64)}`)), 'discover.agent-skills');
+  assert.deepEqual([wrong.status, wrong.result.summary], ['partial', 'The digest of the skill acme does not match its file.']);
+});
