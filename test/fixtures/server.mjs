@@ -44,7 +44,12 @@ export async function startSite(routes, { notFound = NOT_FOUND } = {}) {
     origin,
     hits,
     hitsFor: (path) => hits.filter((hit) => hit.path === path),
-    close: () => new Promise((resolve) => server.close(resolve)),
+    // Node 18 keeps idle keep-alive connections open after close(), so each test would wait for their timeout.
+    close: () =>
+      new Promise((resolve) => {
+        server.close(resolve);
+        server.closeAllConnections();
+      }),
   };
 }
 
