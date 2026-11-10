@@ -1,0 +1,11 @@
+{
+  "specVersion": "1.0",
+  "entries": [
+    {
+      "identifier": "urn:air:<host>:mcp:<server>",
+      "displayName": "<Display name>",
+      "type": "application/mcp-server-card+json",
+      "url": "https://<host>/mcp/server-card"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://<api-host>/<version>",
+      "service-desc": [
+        { "href": "https://<api-host>/<version>/openapi.json", "type": "application/openapi+json" }
+      ],
+      "service-doc": [
+        { "href": "https://<docs-host>/docs/api", "type": "text/html" }
+      ],
+      "status": [
+        { "href": "https://<status-host>" }
+      ]
+    }
+  ]
+}

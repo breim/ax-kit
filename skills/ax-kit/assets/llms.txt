@@ -1,0 +1,19 @@
+# <Product name>
+
+> <One or two sentences: what the product is, who uses it, and what it does.>
+
+<Optional: two or three sentences that an agent must know before it reads more. Example: how to authenticate.>
+
+## Docs
+
+- [Quick start](https://<host>/docs/quick-start.md): <when to read this page>
+- [Authentication](https://<host>/docs/authentication.md): <when to read this page>
+- [API reference](https://<host>/openapi.json): the OpenAPI description
+
+## Guides
+
+- [<Task name>](https://<host>/docs/<task>.md): <when to read this page>
+
+## Optional
+
+- [Changelog](https://<host>/changelog.md)

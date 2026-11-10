@@ -1,0 +1,15 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+  "name": "<namespace>/<server>",
+  "version": "<semantic version>",
+  "description": "<What the server does, in 100 characters or fewer>",
+  "title": "<Display name>",
+  "websiteUrl": "https://<host>",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://<host>/mcp",
+      "supportedProtocolVersions": ["2026-07-28"]
+    }
+  ]
+}
