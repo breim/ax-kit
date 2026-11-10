@@ -1,0 +1,15 @@
+{
+  "name": "agent-experience",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AX Kit: an agent skill that improves the Agent Experience (AX) of a site, API, or SaaS.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs test/unit/*.test.mjs test/e2e/*.test.mjs",
+    "catalog": "node skills/ax-kit/scripts/ax.mjs catalog --markdown > skills/ax-kit/references/checks.md"
+  }
+}
