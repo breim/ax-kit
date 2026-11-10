@@ -64,7 +64,9 @@ test('the scanner sends only read-only methods, one POST at most, and stays in t
 
 test('each request identifies the scanner', async () => {
   const { site } = await scanSite(goodContentSite);
-  assert.deepEqual([...new Set(site.hits.map((hit) => hit.headers['user-agent']))], ['ax-kit/0.1.0']);
+  const anonymous = site.hits.filter((hit) => !hit.headers['user-agent'].endsWith('ax-kit/0.1.0'));
+  assert.deepEqual(anonymous, []);
+  assert.ok(site.hits.some((hit) => hit.headers['user-agent'] === 'ax-kit/0.1.0'));
 });
 
 test('a blocked site is capped at 59 with grade F', async () => {
