@@ -153,7 +153,9 @@ test('parity prefers the negotiated Markdown to the Markdown file', async () => 
 
 test('parity passes when the HTML page has no visible text', async () => {
   const shell = '<!doctype html><html><body><div id="root"></div></body></html>';
-  assert.equal(await statusOf(negotiated(markdown(MARKDOWN), shell), PARITY), 'pass');
+  const { result } = await runCheckOn(negotiated(markdown(MARKDOWN), shell), PARITY);
+  assert.equal(result.status, 'pass');
+  assert.equal(result.summary, 'The HTML page has no visible text, so the Markdown version is the readable version.');
 });
 
 test('parity is blocked when the page has no Markdown version', async () => {

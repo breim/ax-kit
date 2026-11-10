@@ -96,7 +96,7 @@ test('metadata is partial with two items and fails with one item or none', async
 });
 
 test('metadata does not count an empty value, and names the missing items', async () => {
-  const empty = '<title> </title><meta name="description" content="">';
+  const empty = '<title> </title><meta name="description" content=" ">';
   const { result } = await runCheckOn(site(documentWith(empty, ' lang="en"')), 'read.metadata');
   assert.equal(result.status, 'fail');
   assert.equal(result.summary, 'The entry page does not have a title or a meta description.');
