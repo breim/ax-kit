@@ -43,6 +43,15 @@ test('the good site scores above the bad site, and the good site has no cap', as
   assert.deepEqual(good.coverage.notAssessed, []);
 });
 
+test('a site that blocks a training crawler can get a perfect score', async () => {
+  for (const profile of ['content', 'commerce']) {
+    const { report } = await scanSite(goodContentSite, profile);
+    const open = report.checks.filter((check) => check.bucket === 'score' && !['pass', 'not_applicable'].includes(check.status));
+    assert.deepEqual(open.map((check) => check.id), [], profile);
+    assert.deepEqual([report.score, report.grade, report.opportunities.length], [100, 'A', 0], profile);
+  }
+});
+
 test('two scans of one site give the same report', async () => {
   await withSite(goodContentSite, async (site) => {
     const first = JSON.stringify(await scan({ target: site.origin, profile: 'content' }));
@@ -109,8 +118,10 @@ test('the CLI prints JSON and exits 0 without a gate', async () => {
 });
 
 test('the CLI gate exits 0, 1, or 3 from the score and the upper bound', async () => {
-  await withSite(unstableContentSite, async (site) => {
+  const routes = { ...unstableContentSite, '/sitemap.xml': { status: 404 } };
+  await withSite(routes, async (site) => {
     const { score, upperBound } = await scan({ target: site.origin, profile: 'content' });
+    assert.ok(upperBound < 100);
     const exitFor = async (minimum) => (await runCli(['scan', site.origin, '--profile', 'content', '--min-score', String(minimum)])).code;
     assert.ok(upperBound > score);
     assert.deepEqual(
