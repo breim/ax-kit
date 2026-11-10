@@ -76,15 +76,16 @@ export function scoreUnits(units, pillarWeights) {
   const pillars = scorePillars(units, pillarWeights);
   const report = { pillars: pillars.map(pillarReport), opportunities: opportunitiesOf(pillars) };
   const gates = units.filter((unit) => unit.gate);
+  const failedGates = gates.filter(isFailed).map((unit) => unit.id);
+  const capped = failedGates.length > 0;
 
-  if (gates.some(isUnassessed)) {
+  // A failed gate decides the cap. Only when no gate failed does an unassessed gate leave the score open.
+  if (!capped && gates.some(isUnassessed)) {
     return { score: null, upperBound: null, coverage: null, grade: null, cap: null, ...report };
   }
 
   const rawLower = pillars.reduce((sum, pillar) => add(sum, pillar.lower), ZERO);
   const rawUpper = pillars.reduce((sum, pillar) => add(sum, pillar.upper), ZERO);
-  const failedGates = gates.filter(isFailed).map((unit) => unit.id);
-  const capped = failedGates.length > 0;
 
   const score = floorOf(capped ? capAt(rawLower, GATE_CAP) : rawLower);
   const upperBound = floorOf(capped ? capAt(rawUpper, GATE_CAP) : rawUpper);

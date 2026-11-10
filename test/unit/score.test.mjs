@@ -180,3 +180,12 @@ test('the CI gate passes on the score, fails on the upper bound, and is inconclu
     ['pass', 'inconclusive', 'inconclusive', 'fail'],
   );
 });
+
+test('a failed gate gives a capped score when the other gate is unassessed', () => {
+  const blocked = withStatus(withStatus(contentSite(), 'reach.plain-fetch', 'fail'), 'read.content-without-js', 'not_assessed');
+  const result = scoreUnits(blocked, CONTENT_WEIGHTS);
+  assert.notEqual(result.score, null);
+  assert.ok(result.score <= 59 && result.upperBound <= 59);
+  assert.deepEqual(result.cap.by, ['reach.plain-fetch']);
+  assert.equal(result.grade, 'F');
+});
