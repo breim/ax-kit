@@ -22,7 +22,7 @@ const observedModel = (model) =>
 async function runOpenapiValid(ctx) {
   const model = await loadOperations(ctx);
   if (model.state === 'missing') {
-    return blocked('discover.api-description', 'No API description was found, so the scanner cannot assess its content.');
+    return blocked('discover.api-description', 'The scanner found no API description, so it cannot assess the content.');
   }
   const evidence = [seen(model.snapshot, observedModel(model))];
   const invalid = INVALID.find(([applies]) => applies(model));

@@ -12,8 +12,8 @@ export const reviewChecks = [
     playbook: 'mcp-server',
     rubric: {
       pass: 'Each tool has a clear name, a description that says when to use it, and a typed input schema with a description for each parameter. Each tool has annotations for read-only and destructive behaviour. The server has a small set of tools that match user tasks.',
-      partial: 'The tools have names and typed schemas, but one of these is true: some descriptions do not say when to use the tool, some parameters have no description, or the annotations are missing.',
-      fail: 'The product has no MCP server, or the tools have no description or no typed input schema, or the server has too many tools for a model to select the correct one.',
+      partial: 'The tools have names and typed schemas. But some descriptions do not say when to use the tool, some parameters have no description, or the annotations are absent.',
+      fail: 'The product has no MCP server. Or the tools have no description or no typed input schema. Or the server has too many tools for a model to select the correct one.',
       evidence: 'Call `tools/list` on the MCP server. Record the number of tools. For each tool, record the name, the description, the `inputSchema`, and the annotations `readOnlyHint` and `destructiveHint`.',
     },
   }),
@@ -26,7 +26,7 @@ export const reviewChecks = [
     playbook: 'api-design',
     rubric: {
       pass: 'Each write operation that is not idempotent accepts an `Idempotency-Key` header. The documentation states how long the server keeps a key and what a repeated key returns. The other write operations are idempotent, for example `PUT` and `DELETE`.',
-      partial: 'Some write operations accept an idempotency key and others do not, or the header exists but the documentation does not state the behaviour for a repeated key.',
+      partial: 'Some write operations accept an idempotency key and others do not. Or the header exists, but the documentation does not state the behaviour for a repeated key.',
       fail: 'A `POST` operation that creates a resource or moves money accepts no idempotency key, so a retry after a timeout can create a duplicate.',
       evidence: 'Read the API description and the documentation. Find the `POST` and `PATCH` operations that create or change resources. Record which of them accept an `Idempotency-Key` header, and the documented behaviour for a repeated key.',
     },
@@ -40,7 +40,7 @@ export const reviewChecks = [
     rubric: {
       pass: 'Each list operation uses cursor pagination and has a `limit` parameter with a documented default and maximum. The response gives the cursor of the next page. The order of the items is stable and documented.',
       partial: 'The list operations have pagination, but they use page numbers or offsets, or the limit or the order has no documentation.',
-      fail: 'A list operation returns all the items in one response, or it returns a part of the items and gives no method to get the others.',
+      fail: 'A list operation returns all the items in one response. Or it returns a part of the items and gives no method to get the others.',
       evidence: 'Find the operations that return an array. Record the pagination parameters, the default limit and the maximum limit, the response field for the next cursor, and the documented order.',
     },
   }),
