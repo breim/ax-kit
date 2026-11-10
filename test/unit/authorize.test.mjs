@@ -461,6 +461,14 @@ test('a document with a security scheme or a security requirement never gives op
   }
 });
 
+test('an entry response with status 401 shows that the API needs authorization, and sends no probe', async () => {
+  const entry = (status) => ({ ...openSite(), '/': { status, body: '' } });
+  const unauthorized = await runCheckOn(entry(401), 'authorize.rfc8414-metadata', API);
+  assert.equal(unauthorized.status, 'fail');
+  assert.equal(unauthorized.site.hitsFor('/items').length, 0);
+  assert.equal((await runCheckOn(entry(403), 'authorize.rfc8414-metadata', API)).result.summary, OPEN_ACCESS);
+});
+
 test('a YAML description is not evidence of open access', async () => {
   const routes = { '/openapi.yaml': text('openapi: 3.0.3\npaths:\n  /items:\n    get: {}\n'), '/items': json([]) };
   assert.equal(await statusOf(routes, 'authorize.rfc8414-metadata', API), 'fail');
@@ -542,30 +550,35 @@ test('the Authorize checks are not applicable to the content profile and make no
 
 const SHARED_PATHS = ['/', '/.well-known/api-catalog', '/openapi.json'];
 
-test('the Authorize checks add 8 requests at most to one scan', async () => {
-  const tenantServer = (request) =>
-    json(serverDocument(`${originOf(request)}/tenant`, { agent_auth: { skill: `${originOf(request)}/docs/auth.md` } }));
-  const site = await startSite({
-    '/': { status: 401, headers: { 'www-authenticate': 'Bearer resource_metadata="/missing.json"' }, body: '' },
-    [RESOURCE_PATH]: resourceMetadata((origin) => [`${origin}/tenant`]),
-    [`${SERVER_PATH}/tenant`]: tenantServer,
-    ...openSite(),
-  });
+const tenantServer = (request) =>
+  json(serverDocument(`${originOf(request)}/tenant`, { agent_auth: { skill: `${originOf(request)}/docs/auth.md` } }));
+const worstCaseSite = {
+  [RESOURCE_PATH]: resourceMetadata((origin) => [`${origin}/tenant`]),
+  [`${SERVER_PATH}/tenant`]: tenantServer,
+  ...openSite(),
+};
+const CHAIN_PATHS = [
+  '/.well-known/oauth-authorization-server/tenant',
+  '/.well-known/oauth-protected-resource',
+  '/.well-known/openid-configuration/tenant',
+  '/auth.md',
+  '/docs/auth.md',
+  '/tenant/.well-known/openid-configuration',
+];
+
+async function addedRequests(routes) {
+  const site = await startSite(routes);
   try {
     const ctx = createContext({ target: site.origin, profile: 'api' });
     await runChecks(CHECKS.filter((check) => check.id.startsWith('authorize.')), ctx);
-    const added = site.hits.map((hit) => hit.path).filter((path) => !SHARED_PATHS.includes(path));
-    assert.deepEqual(added.sort(), [
-      '/.well-known/oauth-authorization-server/tenant',
-      '/.well-known/oauth-protected-resource',
-      '/.well-known/openid-configuration/tenant',
-      '/auth.md',
-      '/docs/auth.md',
-      '/items',
-      '/missing.json',
-      '/tenant/.well-known/openid-configuration',
-    ]);
+    return site.hits.map((hit) => hit.path).filter((path) => !SHARED_PATHS.includes(path)).sort();
   } finally {
     await site.close();
   }
+}
+
+test('the Authorize checks add 7 requests at most to one scan, with a hint or with a probe', async () => {
+  const hinted = { status: 401, headers: { 'www-authenticate': 'Bearer resource_metadata="/missing.json"' }, body: '' };
+  assert.deepEqual(await addedRequests({ ...worstCaseSite, '/': hinted }), [...CHAIN_PATHS, '/missing.json'].sort());
+  assert.deepEqual(await addedRequests(worstCaseSite), [...CHAIN_PATHS, '/items'].sort());
 });

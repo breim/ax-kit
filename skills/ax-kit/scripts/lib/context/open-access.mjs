@@ -4,6 +4,7 @@ import { operationsOf } from './openapi-operations.mjs';
 import { toHttpUrl } from './url.mjs';
 
 const CLOSED = { open: false };
+const UNAUTHORIZED = 401;
 
 const hasEntries = (value) => (Array.isArray(value) ? value.length > 0 : isJsonObject(value) && Object.keys(value).length > 0);
 
@@ -24,6 +25,7 @@ export function probeUrl(document, descriptionUrl, origin) {
 const isSuccess = (status) => status >= 200 && status < 300;
 
 async function findOpenAccess(ctx) {
+  if ((await ctx.entry()).status === UNAUTHORIZED) return CLOSED;
   const api = await loadOpenapi(ctx);
   if (api.state !== 'found' || declaresSecurity(api.document)) return CLOSED;
   const url = probeUrl(api.document, api.url, ctx.origin);

@@ -145,8 +145,9 @@ It uses the first URL in `authorization_servers` as the issuer. If no document n
 - `authorize.headless-grant` passes when `grant_types_supported` has `client_credentials` or the device code grant.
 - `authorize.scopes` passes when `scopes_supported` has one entry or more.
 
-**Open access.** Each check above also passes when the scanner has evidence that the API needs no authorization. The evidence has three parts.
-The OpenAPI document is JSON. It declares no security scheme and no security requirement. One `GET` operation with no path parameter, on the scanned origin, returns a 2xx status with no credentials.
+**Open access.** Each check above also passes when the scanner has evidence that the API needs no authorization. The evidence has four parts.
+The scanned URL does not return status 401. The OpenAPI document is JSON. It declares no security scheme and no security requirement.
+One `GET` operation with no path parameter, on the scanned origin, returns a 2xx status with no credentials.
 
 ## Security notes
 
