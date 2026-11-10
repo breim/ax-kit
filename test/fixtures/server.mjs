@@ -31,7 +31,7 @@ export async function startSite(routes, { notFound = NOT_FOUND } = {}) {
     hits.push(request);
 
     const route = routes[`${request.method} ${request.path}`] ?? routes[request.path];
-    const response = { ...NOT_FOUND, ...(route ? resolveRoute(route, request) : notFound) };
+    const response = { ...NOT_FOUND, ...resolveRoute(route ?? notFound, request) };
     if (response.delayMs) await delay(response.delayMs);
     outgoing.writeHead(response.status ?? 200, response.headers ?? {});
     outgoing.end(request.method === 'HEAD' ? undefined : response.body);

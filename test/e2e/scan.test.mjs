@@ -6,7 +6,16 @@ import { fileURLToPath } from 'node:url';
 import { LIMITS } from '../../skills/ax-kit/scripts/lib/model.mjs';
 import { scan } from '../../skills/ax-kit/scripts/lib/scan/scan.mjs';
 import { startSite } from '../fixtures/server.mjs';
-import { badContentSite, blockedSite, goodContentSite, softNotFound, unstableContentSite } from '../fixtures/sites.mjs';
+import {
+  badContentSite,
+  blockedSite,
+  goodApiSite,
+  goodContentSite,
+  goodWebappSite,
+  problemNotFound,
+  softNotFound,
+  unstableContentSite,
+} from '../fixtures/sites.mjs';
 
 const CLI = fileURLToPath(new URL('../../skills/ax-kit/scripts/ax.mjs', import.meta.url));
 const ALLOWED_METHODS = ['GET', 'HEAD', 'OPTIONS', 'POST'];
@@ -50,6 +59,27 @@ test('a site that blocks a training crawler can get a perfect score', async () =
     assert.deepEqual(open.map((check) => check.id), [], profile);
     assert.deepEqual([report.score, report.grade, report.opportunities.length], [100, 'A', 0], profile);
   }
+});
+
+test('a complete API and a complete web app get a perfect score', async () => {
+  const targets = [
+    [goodApiSite, 'api'],
+    [goodWebappSite, 'webapp'],
+  ];
+  for (const [routes, profile] of targets) {
+    const { report, site } = await scanSite(routes, profile, { notFound: problemNotFound });
+    assert.deepEqual([report.score, report.grade, report.opportunities.length], [100, 'A', 0], profile);
+    assert.deepEqual(site.hits.filter((hit) => hit.method === 'POST').map((hit) => hit.path), ['/mcp'], profile);
+    assert.ok(site.hits.length <= LIMITS.requests / 2, `${profile}: ${site.hits.length} requests`);
+  }
+});
+
+test('an API with only a JSON root scores below a complete API and has no cap', async () => {
+  const bare = { '/': { status: 200, headers: { 'content-type': 'application/json' }, body: '{"ok":true}' } };
+  const { report } = await scanSite(bare, 'api');
+  assert.ok(report.score < 30, `score ${report.score}`);
+  assert.equal(report.cap, null);
+  assert.equal(report.pillars.find((pillar) => pillar.id === 'act').points, 0);
 });
 
 test('two scans of one site give the same report', async () => {
