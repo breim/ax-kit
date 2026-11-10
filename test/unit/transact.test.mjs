@@ -234,3 +234,19 @@ test('the Transact checks add 2 requests to one scan of a store', async () => {
     await site.close();
   }
 });
+
+const AP2_CAPABILITY = 'dev.ucp.common.payment.ap2_mandate';
+const ucpWithCapabilities = (capabilities) => ({ [UCP_PATH]: json(ucpDocument({ capabilities })) });
+
+test('AP2 passes when the UCP profile declares the mandates capability', async () => {
+  const { result, site } = await runCheckOn(ucpWithCapabilities({ [AP2_CAPABILITY]: [{ version: '2026-08-25' }] }), 'transact.ap2', COMMERCE);
+  assert.deepEqual([result.status, result.summary], ['pass', 'The UCP profile declares the AP2 mandates capability.']);
+  assert.equal(site.hits.length, 1);
+});
+
+test('AP2 fails for a different capability, for a list in place of an object, and for no profile', async () => {
+  assert.equal(await statusOf(ucpWithCapabilities({ 'dev.ucp.shopping.checkout': [{}] }), 'transact.ap2', COMMERCE), 'fail');
+  assert.equal(await statusOf(ucpWithCapabilities([AP2_CAPABILITY]), 'transact.ap2', COMMERCE), 'fail');
+  assert.equal(await statusOf(ucpWithCapabilities(undefined), 'transact.ap2', COMMERCE), 'fail');
+  assert.equal(await statusOf({}, 'transact.ap2', COMMERCE), 'fail');
+});

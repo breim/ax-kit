@@ -2,7 +2,7 @@
 
 - **Reviewed:** 2026-11
 - **Pillar:** Transact
-- **Checks:** group `transact.payment-protocol` (Watch) = `transact.acp`, `transact.ucp`, `transact.x402`, `transact.mpp`
+- **Checks:** group `transact.payment-protocol` (Watch) = `transact.acp`, `transact.ucp`, `transact.ap2`, `transact.x402`, `transact.mpp`
 - **Template:** none
 
 ## Why agents need it
@@ -157,7 +157,7 @@ node <skill-dir>/scripts/ax.mjs scan https://<api-host>/<paid-path> --profile ap
 - `transact.x402` passes when the scanned URL returns status 402 with a version 2 `PAYMENT-REQUIRED` header. It is partial for a version 1 body.
 - `transact.mpp` passes when the scanned URL returns status 402 with a complete `Payment` challenge. For the `api` profile, it also passes when an OpenAPI operation has `x-payment-info`.
 - The x402 and MPP checks read only the scanned URL. Scan a paid URL to assess them.
-- The scanner has no check for AP2, because the AP2 specification defines no discovery document.
+- `transact.ap2` passes when the UCP profile has the capability `dev.ucp.common.payment.ap2_mandate`. The AP2 specification defines no discovery document of its own, so the scanner reads only the UCP profile.
 
 Do not complete a payment on a live site to verify these checks.
 

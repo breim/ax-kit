@@ -8,11 +8,12 @@ import {
   readPaymentChallenge,
   readX402,
 } from '../context/payment-protocols.mjs';
-import { parseJson } from '../json.mjs';
+import { isJsonObject, parseJson } from '../json.mjs';
 import { fail, partial, pass, seen } from './result.mjs';
 
 const ACP_PATH = '/.well-known/acp.json';
 const UCP_PATH = '/.well-known/ucp';
+const AP2_CAPABILITY = 'dev.ucp.common.payment.ap2_mandate';
 
 async function fetchDocument(ctx, path) {
   const snapshot = await ctx.get(ctx.at(path));
@@ -33,6 +34,16 @@ async function runUcp(ctx) {
   const missing = missingUcpMembers(document);
   if (missing.length > 0) return partial(`The UCP profile has no valid ${missing.join(', ')}.`, [seen(snapshot, 'incomplete')]);
   return pass(`The UCP profile declares version ${document.ucp.version}.`, [seen(snapshot, 'valid')]);
+}
+
+async function runAp2(ctx) {
+  const { snapshot, document } = await fetchDocument(ctx, UCP_PATH);
+  const capabilities = hasUcpMember(document) ? document.ucp.capabilities : null;
+  const declared = isJsonObject(capabilities) && AP2_CAPABILITY in capabilities;
+  const evidence = [seen(snapshot, declared ? AP2_CAPABILITY : 'no AP2 capability')];
+  return declared
+    ? pass('The UCP profile declares the AP2 mandates capability.', evidence)
+    : fail('No UCP profile declares the AP2 mandates capability.', evidence);
 }
 
 async function runX402(ctx) {
@@ -70,6 +81,7 @@ const SPEC = {
   ucp: 'https://ucp.dev/specification/overview/',
   x402: 'https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/http.md',
   mpp: 'https://datatracker.ietf.org/doc/draft-httpauth-payment/',
+  ap2: 'https://ucp.dev/specification/payment/extensions/ap2-mandates/',
 };
 
 export const groups = [
@@ -104,6 +116,16 @@ export const checks = [
     spec: SPEC.ucp,
     reviewed: '2026-11',
     run: runUcp,
+  },
+  {
+    id: 'transact.ap2',
+    title: 'The UCP profile declares the AP2 mandates capability',
+    group: 'transact.payment-protocol',
+    stability: 'emerging',
+    evidence: 'measured',
+    spec: SPEC.ap2,
+    reviewed: '2026-11',
+    run: runAp2,
   },
   {
     id: 'transact.x402',
