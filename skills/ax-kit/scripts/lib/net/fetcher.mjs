@@ -35,13 +35,13 @@ async function readBody(response, limit) {
   }
 }
 
-async function requestOnce(url, request, fetchImpl) {
+async function requestOnce(url, request, { fetchImpl, timeoutMs }) {
   const response = await fetchImpl(url, {
     method: request.method,
     headers: { 'user-agent': USER_AGENT, accept: '*/*', ...request.headers },
     body: request.body,
     redirect: 'manual',
-    signal: AbortSignal.timeout(LIMITS.timeoutMs),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const headers = Object.fromEntries(response.headers.entries());
   if (REDIRECT_STATUSES.has(response.status) && headers.location && FOLLOWED_METHODS.has(request.method)) {
@@ -54,11 +54,11 @@ async function requestOnce(url, request, fetchImpl) {
 
 const errorName = (error) => (error?.name === 'TimeoutError' || error?.name === 'AbortError' ? 'timeout' : 'network');
 
-async function follow(request, { fetchImpl, target }, redirects) {
+async function follow(request, { target, ...transport }, redirects) {
   let current = request.url;
   for (let hop = 0; hop <= LIMITS.redirects; hop += 1) {
     if (!isAllowedUrl(target, current)) return failure(request, 'blocked_url', redirects);
-    const response = await requestOnce(current, request, fetchImpl);
+    const response = await requestOnce(current, request, transport);
     if (!response.redirectTo) {
       return { url: request.url, method: request.method, finalUrl: current, ...response, redirects, error: null };
     }
@@ -68,11 +68,11 @@ async function follow(request, { fetchImpl, target }, redirects) {
   return failure(request, 'too_many_redirects', redirects);
 }
 
-export async function fetchSnapshot(request, { fetchImpl = fetch, target }) {
+export async function fetchSnapshot(request, { fetchImpl = fetch, target, timeoutMs = LIMITS.timeoutMs }) {
   if (!ALLOWED_METHODS.has(request.method)) return failure(request, 'method_not_allowed');
   const redirects = [];
   try {
-    return await follow(request, { fetchImpl, target }, redirects);
+    return await follow(request, { fetchImpl, target, timeoutMs }, redirects);
   } catch (error) {
     return failure(request, errorName(error), redirects);
   }

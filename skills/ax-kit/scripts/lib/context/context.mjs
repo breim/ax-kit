@@ -25,14 +25,14 @@ const lowercaseKeys = (headers) =>
 const requestKey = (request) =>
   JSON.stringify([request.method, request.url, Object.entries(request.headers).sort(), request.body ?? null]);
 
-export function createContext({ target, profile, fetchImpl = fetch, limiter = createLimiter(LIMITS) }) {
+export function createContext({ target, profile, fetchImpl = fetch, limiter = createLimiter(LIMITS), timeoutMs }) {
   const entryUrl = new URL(target).href;
   const origin = new URL(target).origin;
   const snapshots = new Map();
   const resources = new Map();
 
   async function send(request) {
-    const outcome = await limiter.run(request.method, () => fetchSnapshot(request, { fetchImpl, target: entryUrl }));
+    const outcome = await limiter.run(request.method, () => fetchSnapshot(request, { fetchImpl, target: entryUrl, timeoutMs }));
     return outcome.refused ? refusedSnapshot(request, outcome.refused) : outcome.value;
   }
 

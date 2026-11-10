@@ -6,8 +6,8 @@ import { runChecks } from './runner.mjs';
 
 const declared = (value) => ({ value, source: 'declared', signals: [] });
 
-export async function scan({ target, profile = null, minScore = null, fetchImpl }) {
-  const ctx = createContext({ target, profile, fetchImpl });
+export async function scan({ target, profile = null, minScore = null, fetchImpl, timeoutMs }) {
+  const ctx = createContext({ target, profile, fetchImpl, timeoutMs });
   const entry = await ctx.entry();
   const resolved = profile ? declared(profile) : detectProfile(entry);
   ctx.profile = resolved.value;

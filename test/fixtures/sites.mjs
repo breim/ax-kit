@@ -170,3 +170,13 @@ export const problemNotFound = (request) =>
   /application\/json/.test(request.headers.accept ?? '')
     ? { status: 404, headers: { 'content-type': 'application/problem+json' }, body: JSON.stringify(PROBLEM) }
     : { status: 404, headers: { 'content-type': 'text/plain' }, body: 'Not found' };
+
+const SHELL = `<!doctype html>
+<html lang="en">
+<head><title>Acme App</title><meta name="description" content="The Acme application."></head>
+<body><div id="root"></div><noscript>You need to enable JavaScript to run this app.</noscript><script src="/assets/app.js"></script></body>
+</html>`;
+
+export const javascriptOnlySite = { ...goodContentSite, '/': html(SHELL, HOME_HEADERS) };
+
+export const slowSite = { ...goodContentSite, '/llms.txt': { ...text(LLMS_TXT), delayMs: 400 } };

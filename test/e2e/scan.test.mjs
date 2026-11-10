@@ -12,7 +12,9 @@ import {
   goodApiSite,
   goodContentSite,
   goodWebappSite,
+  javascriptOnlySite,
   problemNotFound,
+  slowSite,
   softNotFound,
   unstableContentSite,
 } from '../fixtures/sites.mjs';
@@ -113,6 +115,23 @@ test('a blocked site is capped at 59 with grade F', async () => {
   assert.ok(report.score <= 59);
   assert.equal(report.grade, 'F');
   assert.deepEqual(report.cap.by, ['reach.plain-fetch']);
+});
+
+test('a JavaScript-only page is capped at 59, with the other checks still assessed', async () => {
+  const { report } = await scanSite(javascriptOnlySite);
+  assert.deepEqual(report.cap.by, ['read.content-without-js']);
+  assert.ok(report.cap.uncapped > 59, `uncapped ${report.cap.uncapped}`);
+  assert.deepEqual([report.score, report.grade], [59, 'F']);
+});
+
+test('a slow resource has no result, and the report gives the timeout as the reason', async () => {
+  await withSite(slowSite, async (site) => {
+    const report = await scan({ target: site.origin, profile: 'content', timeoutMs: 100 });
+    const slow = report.checks.find((check) => check.id === 'discover.llms-txt');
+    assert.deepEqual([slow.status, slow.reason], ['not_assessed', 'timeout']);
+    assert.ok(report.upperBound > report.score);
+    assert.equal(report.grade, null);
+  });
 });
 
 test('an unreachable site has no score', async () => {
