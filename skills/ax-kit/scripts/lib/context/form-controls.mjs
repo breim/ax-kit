@@ -1,51 +1,46 @@
-import { parseAttributes, textOf } from './html.mjs';
+import { elementsOf, openTagsOf, parseAttributes, textOf, tokenize } from './html.mjs';
 
-const NOT_RENDERED = /<!--[\s\S]*?-->|<(script|style|template|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi;
-const FIELD = /<(input|select|textarea)\b([^>]*)>/gi;
-const BUTTON = /<button\b([^>]*)>([\s\S]*?)<\/button\s*>/gi;
-const LABEL = /<label\b([^>]*)>([\s\S]*?)<\/label\s*>/gi;
-const OPENING_TAG = /<[a-z][^>]*>/gi;
-
+const FIELD_TAGS = ['input', 'select', 'textarea'];
+const NOT_RENDERED_TAGS = ['template', 'noscript'];
 const UNCOUNTED_INPUT_TYPES = ['hidden', 'submit', 'button', 'image', 'reset'];
 const NAME_ATTRIBUTES = ['aria-label', 'aria-labelledby', 'title'];
 const CONTENT_NAME_ATTRIBUTES = ['alt', 'aria-label'];
+const MAX_CONTROLS = 500;
+const MAX_LABELS = 2000;
+const MAX_HIDDEN_BLOCKS = 200;
 
 const hasValue = (attributes, names) => names.some((name) => (attributes[name] ?? '').trim() !== '');
 
 const fieldsOf = (html) =>
-  [...html.matchAll(FIELD)].map((match) => ({
-    tag: match[1].toLowerCase(),
-    attributes: parseAttributes(match[2]),
-    position: match.index,
-    content: '',
-  }));
+  openTagsOf(html, FIELD_TAGS).map((tag) => ({ tag: tag.name, attributes: tag.attributes, position: tag.start, content: '' }));
 
 const buttonsOf = (html) =>
-  [...html.matchAll(BUTTON)].map((match) => ({
+  elementsOf(html, ['button']).map((button) => ({
     tag: 'button',
-    attributes: parseAttributes(match[1]),
-    position: match.index,
-    content: match[2],
+    attributes: button.attributes,
+    position: button.start,
+    content: button.content,
   }));
 
 const labelsOf = (html) =>
-  [...html.matchAll(LABEL)]
-    .filter((match) => textOf(match[2]) !== '')
-    .map((match) => ({
-      target: parseAttributes(match[1]).for ?? '',
-      start: match.index,
-      end: match.index + match[0].length,
-    }));
+  elementsOf(html, ['label'])
+    .slice(0, MAX_LABELS)
+    .filter((label) => textOf(label.content) !== '')
+    .map((label) => ({ target: label.attributes.for ?? '', start: label.start, end: label.end }));
 
 const isCounted = (control) =>
   control.tag !== 'input' || !UNCOUNTED_INPUT_TYPES.includes((control.attributes.type ?? '').toLowerCase());
 
-const hasNameFromContent = (content) =>
-  textOf(content) !== '' || (content.match(OPENING_TAG) ?? []).some((tag) => hasValue(parseAttributes(tag), CONTENT_NAME_ATTRIBUTES));
+const hasNamedChild = (content) =>
+  tokenize(content).some((token) => token.type === 'open' && hasValue(parseAttributes(token.source), CONTENT_NAME_ATTRIBUTES));
+
+const hasNameFromContent = (content) => textOf(content) !== '' || hasNamedChild(content);
+
+const isInside = (range, position) => range.start < position && position < range.end;
 
 // A label with a `for` attribute names only its target. A label with no `for` attribute names the controls inside it.
 const isLabelFor = (label, control) =>
-  label.target === '' ? label.start < control.position && control.position < label.end : label.target === control.attributes.id;
+  label.target === '' ? isInside(label, control.position) : label.target === control.attributes.id;
 
 const hasName = (control, labels) =>
   hasValue(control.attributes, NAME_ATTRIBUTES) ||
@@ -53,9 +48,11 @@ const hasName = (control, labels) =>
   labels.some((label) => isLabelFor(label, control));
 
 export function formControlsOf(html) {
-  const rendered = html.replace(NOT_RENDERED, ' ');
-  const labels = labelsOf(rendered);
-  return [...fieldsOf(rendered), ...buttonsOf(rendered)]
+  const notRendered = elementsOf(html, NOT_RENDERED_TAGS).slice(0, MAX_HIDDEN_BLOCKS);
+  const labels = labelsOf(html);
+  return [...fieldsOf(html), ...buttonsOf(html)]
+    .filter((control) => !notRendered.some((block) => isInside(block, control.position)))
     .filter(isCounted)
+    .slice(0, MAX_CONTROLS)
     .map((control) => ({ tag: control.tag, named: hasName(control, labels) }));
 }

@@ -170,3 +170,36 @@ test('the llms.txt parser needs the H1 on the first line with content', () => {
   assert.equal(parseLlmsTxt('## Not an H1').title, null);
   assert.equal(parseLlmsTxt('<!doctype html><html>').looksLikeHtml, true);
 });
+
+test('an unquoted id is a mount element, and a self-closing hidden element hides no text', () => {
+  assert.deepEqual(parseHtml('<body><div id=root> </div></body>').shellSignals, ['empty mount element #root']);
+  assert.equal(visibleTextOf('<p>Before</p><svg/><p>After</p>'), 'Before After');
+  assert.equal(visibleTextOf('<p>Before</p><svg><text>Icon</text></svg><p>After</p>'), 'Before After');
+});
+
+test('script content with angle brackets does not become visible text or markup', () => {
+  const page = '<p>Shown</p><script>if (a < b && c > d) { document.write("<h1>Hidden</h1>"); }</script><p>Also shown</p>';
+  assert.equal(visibleTextOf(page), 'Shown Also shown');
+  assert.deepEqual(parseHtml(page).headings, []);
+});
+
+test('headings keep the document order across levels', () => {
+  const page = '<h2>Two</h2><h1>One</h1><h3>Three</h3><H2>Second two</H2>';
+  assert.deepEqual(parseHtml(page).headings.map((heading) => `${heading.level}:${heading.text}`), ['2:Two', '1:One', '3:Three', '2:Second two']);
+});
+
+test('the parser takes linear time on a page with many unclosed constructs', () => {
+  const size = 400000;
+  const hostilePages = [
+    '<script>'.repeat(size / 8),
+    '<!--'.repeat(size / 4),
+    '<'.repeat(size),
+    '<div '.repeat(size / 5),
+    '<h1>'.repeat(size / 4),
+    '<noscript>'.repeat(size / 10),
+    `<a href="${'"'.repeat(size)}`,
+  ];
+  const started = Date.now();
+  for (const page of hostilePages) parseHtml(page);
+  assert.ok(Date.now() - started < 3000, `parsing took ${Date.now() - started} ms`);
+});
