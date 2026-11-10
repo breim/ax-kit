@@ -5,6 +5,7 @@ import { fail, info, partial, pass, seen } from './result.mjs';
 
 const MISSING_STATUSES = [404, 410];
 const ERROR_STATUS = 400;
+const UNAUTHORIZED = 401;
 const VALIDATOR_HEADERS = ['etag', 'last-modified'];
 const LIFECYCLE_HEADERS = ['deprecation', 'sunset'];
 
@@ -27,6 +28,7 @@ async function runHonest404(ctx) {
   const evidence = [seen(snapshot, statusLabel(snapshot))];
   if (snapshot.error) return fail(`A request for a missing path gets no response: ${snapshot.error}.`, evidence);
   if (MISSING_STATUSES.includes(status)) return pass(`A missing path returns HTTP ${status}.`, evidence);
+  if (status === UNAUTHORIZED) return pass('A missing path asks for credentials before it shows that the path is missing.', evidence);
   if (status >= ERROR_STATUS) {
     return partial(`A missing path returns HTTP ${status}, which is an error but does not say that the path is missing.`, evidence);
   }

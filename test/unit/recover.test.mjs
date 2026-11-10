@@ -33,8 +33,13 @@ test('a missing path passes with status 404 or 410', async () => {
   assert.deepEqual(await outcomeOf(missing({ status: 410 }), HONEST), ['pass', 'A missing path returns HTTP 410.']);
 });
 
+test('a missing path passes when the server asks for credentials first', async () => {
+  const expected = ['pass', 'A missing path asks for credentials before it shows that the path is missing.'];
+  assert.deepEqual(await outcomeOf(missing({ status: 401 }), HONEST, API), expected);
+});
+
 test('a missing path is partial for a different client error', async () => {
-  for (const status of [400, 401, 403, 405, 418]) {
+  for (const status of [400, 402, 403, 405, 418]) {
     const expected = ['partial', `A missing path returns HTTP ${status}, which is an error but does not say that the path is missing.`];
     assert.deepEqual(await outcomeOf(missing({ status }), HONEST, API), expected);
   }
