@@ -217,3 +217,29 @@ test('the scanner requests three announced API descriptions at most', async () =
     await site.close();
   }
 });
+
+const scanFrom = async (entryPath, routes) => {
+  const site = await startSite(routes);
+  try {
+    const openapi = await loadOpenapi(createContext({ target: `${site.origin}${entryPath}`, profile: 'api' }));
+    return { openapi, paths: site.hits.map((hit) => hit.path) };
+  } finally {
+    await site.close();
+  }
+};
+
+test('an API below a base path has its description beside the base path', async () => {
+  const routes = { '/api/v3/openapi.json': json(OPENAPI) };
+  for (const entryPath of ['/api/v3', '/api/v3/']) {
+    const { openapi } = await scanFrom(entryPath, routes);
+    assert.deepEqual([openapi.state, new URL(openapi.url).pathname], ['found', '/api/v3/openapi.json'], entryPath);
+  }
+});
+
+test('an entry URL that names a file uses its directory, and the root entry adds no request', async () => {
+  const beside = await scanFrom('/api/v3/index.html', { '/api/v3/swagger.json': json(OPENAPI) });
+  assert.equal(new URL(beside.openapi.url).pathname, '/api/v3/swagger.json');
+  const root = await scanFrom('/', {});
+  assert.equal(root.paths.filter((path) => path.endsWith('openapi.json')).length, 3);
+  assert.equal(root.paths.includes('/swagger.json'), true);
+});

@@ -15,6 +15,9 @@ export const CONVENTIONAL_PATHS = [
   '/v3/api-docs',
 ];
 
+const ENTRY_RELATIVE_NAMES = ['openapi.json', 'openapi.yaml', 'swagger.json'];
+const FILE_NAME = /\.[a-z0-9]+$/i;
+
 export const describesApi = (document) =>
   isJsonObject(document) &&
   (typeof document.openapi === 'string' || typeof document.swagger === 'string') &&
@@ -66,8 +69,17 @@ export function loadServiceDescLinks(ctx) {
   });
 }
 
+// An API is often below a base path such as /api/v3, with its description beside it.
+function entryRelativeUrls(ctx) {
+  const entry = new URL(ctx.entryUrl);
+  const directory = FILE_NAME.test(entry.pathname) ? entry.pathname.replace(/[^/]*$/, '') : `${entry.pathname.replace(/\/$/, '')}/`;
+  return directory === '/' ? [] : ENTRY_RELATIVE_NAMES.map((name) => new URL(name, new URL(directory, entry.origin)).href);
+}
+
 export function loadConventionalDescription(ctx) {
-  return ctx.once('conventionalDescription', () => firstDescription(ctx, CONVENTIONAL_PATHS.map(ctx.at)));
+  return ctx.once('conventionalDescription', () =>
+    firstDescription(ctx, [...entryRelativeUrls(ctx), ...CONVENTIONAL_PATHS.map(ctx.at)]),
+  );
 }
 
 export function loadOpenapi(ctx) {
