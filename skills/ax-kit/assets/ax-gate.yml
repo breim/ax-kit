@@ -1,0 +1,54 @@
+# AX Score gate. Replace each <placeholder>.
+# Guide: skills/ax-kit/references/ci.md in https://github.com/breim/agent-experience
+name: AX Score
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+env:
+  AX_KIT_VERSION: v0.1.0
+  AX_PROFILE: <content|api|webapp|commerce>
+  AX_MIN_SCORE: <minimum score>
+
+jobs:
+  preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Get the scanner
+        run: git clone --depth 1 --branch "$AX_KIT_VERSION" https://github.com/breim/agent-experience.git "$RUNNER_TEMP/ax-kit"
+      - name: Start the app
+        run: |
+          <install command>
+          <build command>
+          <start command> &
+          curl --silent --fail --retry 30 --retry-delay 1 --retry-connrefused --output /dev/null <local url>
+      - name: Scan
+        run: |
+          scan() {
+            node "$RUNNER_TEMP/ax-kit/skills/ax-kit/scripts/ax.mjs" scan <local url> --profile "$AX_PROFILE" --min-score "$AX_MIN_SCORE"
+          }
+          scan && exit 0
+          code=$?
+          if [ "$code" -eq 3 ]; then scan; else exit "$code"; fi
+
+  production:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Get the scanner
+        run: git clone --depth 1 --branch "$AX_KIT_VERSION" https://github.com/breim/agent-experience.git "$RUNNER_TEMP/ax-kit"
+      - name: Scan production
+        run: node "$RUNNER_TEMP/ax-kit/skills/ax-kit/scripts/ax.mjs" scan <production url> --profile "$AX_PROFILE" --min-score "$AX_MIN_SCORE"
