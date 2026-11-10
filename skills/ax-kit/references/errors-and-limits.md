@@ -97,7 +97,8 @@ RateLimit: "default";r=37;t=42
 ```
 
 - `q` is the quota, and `w` is the window in seconds.
-- `r` is the quota that remains, and `t` is the number of seconds until the quota resets.
+- `r` is the quota that remains. `t` is the number of seconds in which the client can use no more than `r`.
+- The quota is not always full again after `t` seconds.
 - If a response has `Retry-After` and `RateLimit`, the client obeys `Retry-After`.
 - If the API has `X-RateLimit-*` headers, keep them. Document if the reset value is a number of seconds or a timestamp.
 
@@ -153,6 +154,7 @@ curl -sI https://<host>/ | grep -i -E '^(etag|last-modified)'
 - An error must not show a stack trace, a database query, a file path, or an internal host name.
 - An error must not show data of a different tenant. Return the same 404 for a resource of a different tenant and for a missing resource.
 - Return the same error for an unknown user and for a wrong password.
+- Do not remove an authentication check to make a missing path return 404. A 401 response for each path is a valid design.
 - Do not copy the input of the client into `detail` without encoding.
 - The limit headers show the capacity of the service. Send detailed quotas only to authenticated clients.
 - Write the full cause to the server log, and put only an identifier in `instance`.
