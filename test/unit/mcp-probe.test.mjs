@@ -85,6 +85,9 @@ test('a body that is not a JSON-RPC answer is absent', () => {
   absent(response({ jsonrpc: '1.0', result: { supportedVersions: ['2026-07-28'] } }));
   absent(response({ jsonrpc: '2.0', method: 'notifications/message' }));
   absent(response({ jsonrpc: '2.0', id: 1, result: 'text' }));
+  absent(response({ jsonrpc: '2.0', id: 1, error: { message: 'No code' } }));
+  absent(response({ jsonrpc: '2.0', id: 1, error: { code: 'E_FAIL', message: 'Text code' } }));
+  absent(response({ jsonrpc: '2.0', id: 1, error: 'text' }));
   absent(response([discovered]));
   absent(response('', { status: 400 }));
   absent(stream('data: {"jsonrpc":"2.0","method":"notifications/progress"}\n\n'));

@@ -40,7 +40,8 @@ export const sseMessages = (body) => body.split(/\r?\n\r?\n/).map(dataOf).map(pa
 
 const isEventStream = (snapshot) => /text\/event-stream/i.test(snapshot.headers['content-type'] ?? '');
 const messagesOf = (snapshot) => (isEventStream(snapshot) ? sseMessages(snapshot.body) : [parseJson(snapshot.body)].filter(isJsonObject));
-const isAnswer = (message) => message.jsonrpc === '2.0' && (isJsonObject(message.result) || isJsonObject(message.error));
+const isError = (error) => isJsonObject(error) && Number.isInteger(error.code);
+const isAnswer = (message) => message.jsonrpc === '2.0' && (isJsonObject(message.result) || isError(message.error));
 const versionsOf = (list) => (Array.isArray(list) ? list.filter((version) => typeof version === 'string') : []);
 
 function classifyAnswer(answer) {

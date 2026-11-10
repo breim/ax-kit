@@ -11,7 +11,7 @@ test('the reader builds nested mappings and reads each scalar as a string', () =
 });
 
 test('the reader ignores comments, blank lines, a leading document marker, and a byte order mark', () => {
-  const text = lines('﻿# header', '---', '', 'a: 1 # trailing', '  # indented comment', 'b: # empty', '  c: 2');
+  const text = lines(`${String.fromCharCode(0xfeff)}# header`, '---', '', 'a: 1 # trailing', '  # indented comment', 'b: # empty', '  c: 2');
   assert.deepEqual(readYamlOutline(text), { a: '1', b: { c: '2' } });
 });
 
@@ -110,6 +110,23 @@ test('an empty flow collection is an empty list or an empty mapping', () => {
 test('a flow collection with content on one line is an opaque value', () => {
   const outline = readYamlOutline(lines('tags: [users, "a]b"] # comment', "schema: { $ref: '#/components/schemas/User' }", 'list:', '  - {name: id}'));
   assert.deepEqual(outline, { tags: OPAQUE, schema: OPAQUE, list: [OPAQUE] });
+  assert.deepEqual(readYamlOutline(lines('a: [1, 2] # ]', 'b: {} # }')), { a: OPAQUE, b: {} });
+  assert.deepEqual(readYamlOutline(lines('a: ["x"]', "b: ['y']", 'c: ["x \\" ]"]', 'd: [x#y]')), { a: OPAQUE, b: OPAQUE, c: OPAQUE, d: OPAQUE });
+});
+
+test('a flow collection on more lines is an opaque value when its lines are deeper than its key', () => {
+  const text = lines('example:', '  {', '    "text": "a } b: c",', '    "list": [1, 2] # ]', '', '  }', 'required: [', '    id,', '    name ]', 'next: 1');
+  assert.deepEqual(readYamlOutline(text), { example: OPAQUE, required: OPAQUE, next: '1' });
+  assert.deepEqual(readYamlOutline(lines('a:', '  [', '  ]', 'b: 1')), { a: [], b: '1' });
+  assert.equal(readYamlOutline(lines('{', '  "openapi": "3.1.0"', '}')), OPAQUE);
+});
+
+test('a quoted scalar can continue on deeper lines', () => {
+  const text = lines('a: "first\\', '    \\ second" # comment', "b: 'it''s", '', "  here'", 'c:', '  - "x', '    y"', 'd: 1');
+  const outline = readYamlOutline(text);
+  assert.deepEqual(Object.keys(outline), ['a', 'b', 'c', 'd']);
+  assert.match(outline.a, /^first.*second$/);
+  assert.deepEqual([outline.b, outline.c, outline.d], ["it's  here", ['x y'], '1']);
 });
 
 test('an ampersand or an asterisk in the middle of a scalar is not an anchor', () => {
@@ -131,11 +148,16 @@ const UNSUPPORTED = {
   'a second document': lines('a: 1', '---', 'b: 2'),
   'content after the document end marker': lines('a: 1', '...', 'b: 2'),
   'a directive': lines('%YAML 1.2', '---', 'a: 1'),
-  'a flow collection on more than one line': lines('a: [', '  b', ']'),
+  'a flow collection that ends at the indent of its key': lines('a: [', '  b', ']'),
+  'a flow collection with no end': lines('a:', '  b: [', '    c', 'd: 1'),
   'a flow collection with an apostrophe': lines("a: [it's, fine]"),
+  'a flow collection with a quote that does not end on its line': lines('a: [', '  "b', '  c"', '  ]'),
   'text after a flow collection': lines('a: [b] c'),
-  'a quoted scalar on more than one line': lines('a: "first', '  second"'),
+  'text after a flow collection on more lines': lines('a:', '  [', '  ] c'),
+  'a quoted scalar that continues at the indent of its key': lines('a:', '  b: "first', '  second"'),
+  'a quoted scalar with no end': lines('a: "first', '  second'),
   'text after a quoted scalar': lines('a: "b" c'),
+  'text after a quoted scalar on more lines': lines('a: "b', '  c" d'),
   'a deeper line after a quoted scalar': lines('a: "b"', '  c: 1'),
   'a deeper line after a flow collection': lines('a: []', '  c: 1'),
   'a key in the continuation of a plain scalar': lines('a: text', '  b: 1'),
@@ -165,8 +187,12 @@ test('the reader returns null for an empty document, and accepts a document end 
   assert.deepEqual(readYamlOutline(lines('a: 1', '...', '# end')), { a: '1' });
 });
 
-test('the reader stays fast on a long line with no key', () => {
+test('the reader stays fast on long lines that have no end', () => {
   const started = Date.now();
   assert.equal(readYamlOutline(`a${' '.repeat(200000)}b\n`), null);
-  assert.ok(Date.now() - started < 1000);
+  assert.equal(readYamlOutline(`a: ["${'\\"'.repeat(200000)}\n`), null);
+  assert.equal(readYamlOutline(`a: "${'\\"'.repeat(200000)}\n`), null);
+  assert.equal(readYamlOutline(`"${'\\"'.repeat(200000)}\n`), null);
+  assert.equal(readYamlOutline(`a: [${"'' ".repeat(200000)}\n`), null);
+  assert.ok(Date.now() - started < 2000);
 });

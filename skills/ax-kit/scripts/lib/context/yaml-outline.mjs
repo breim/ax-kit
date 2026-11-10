@@ -10,7 +10,7 @@ const SEQUENCE_ENTRY = /^-(\s|$)/;
 const BLOCK_SCALAR = /^[|>][0-9+-]{0,2}\s*(#.*)?$/;
 const SINGLE_QUOTED = /^'((?:[^']|'')*)'(.*)$/;
 const DOUBLE_QUOTED = /^"((?:[^"\\]|\\.)*)"(.*)$/;
-const QUOTED_SPANS = /"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'/g;
+const FLOW_START = /^[[{]/;
 const TRAILING = /^\s*$|^\s+#/;
 const NODE_PROPERTY = /^[&*!]/;
 const NOT_A_PLAIN_KEY = /^[[\]{},#|>]/;
@@ -77,7 +77,7 @@ function splitKey(text) {
 function readNested({ state, indent, inMapping }) {
   const next = peek(state);
   if (!next) return null;
-  if (next.indent > indent) return parseBlock(state, next.indent);
+  if (next.indent > indent) return parseBlock(state, next, indent);
   if (inMapping && next.indent === indent && isSequenceEntry(next.text)) return parseSequence(state, indent);
   return null;
 }
@@ -92,31 +92,67 @@ function readBlockScalar({ state, indent }) {
   return content.join('\n').trim();
 }
 
-function flowEnd(text) {
-  const bare = text.replace(QUOTED_SPANS, (span) => '_'.repeat(span.length));
-  if (/['"]/.test(bare)) return -1;
-  let depth = 0;
-  for (let index = 0; index < bare.length; index += 1) {
-    if ('[{'.includes(bare[index])) depth += 1;
-    if (']}'.includes(bare[index])) depth -= 1;
-    if (depth === 0) return index + 1;
-  }
-  return -1;
+function continuationLine(state, indent) {
+  const line = state.lines[state.position];
+  if (line === undefined || (line.trim() !== '' && spacesBefore(line) <= indent)) unsupported();
+  state.position += 1;
+  return line.trim();
 }
 
-function readFlow({ raw }) {
-  const end = flowEnd(raw);
-  if (end === -1 || !TRAILING.test(raw.slice(end))) unsupported();
-  const compact = raw.slice(0, end).replace(/\s/g, '');
+const startsComment = (text, index) => text[index] === '#' && (index === 0 || /\s/.test(text[index - 1]));
+
+// One pass with no regular expression on the line, because a site can send a line of 2 MB.
+function bareFlowText(text) {
+  const bare = [];
+  let quote = null;
+  for (let index = 0; index < text.length && !(quote === null && startsComment(text, index)); index += 1) {
+    const char = text[index];
+    if (quote === null) {
+      quote = char === '"' || char === "'" ? char : null;
+      bare.push(quote === null ? char : '_');
+    } else if (quote === '"' && char === '\\') index += 1;
+    else if (char === quote) quote = null;
+  }
+  return quote === null ? bare.join('') : unsupported();
+}
+
+function flowDepthAfter(bare, depth) {
+  let open = depth;
+  for (let index = 0; index < bare.length; index += 1) {
+    if ('[{'.includes(bare[index])) open += 1;
+    if (']}'.includes(bare[index])) open -= 1;
+    if (open === 0) return bare.slice(index + 1).trim() === '' ? 0 : unsupported();
+  }
+  return open;
+}
+
+function readFlow({ state, raw, indent }) {
+  const bare = [bareFlowText(raw)];
+  let depth = flowDepthAfter(bare[0], 0);
+  while (depth > 0) {
+    bare.push(bareFlowText(continuationLine(state, indent)));
+    depth = flowDepthAfter(bare.at(-1), depth);
+  }
+  const compact = bare.join('').replace(/\s/g, '');
   if (compact === '[]') return [];
   return compact === '{}' ? {} : OPAQUE;
 }
 
-function readQuoted({ raw }) {
+const closingQuote = (text, single) =>
+  (single ? text.replace(/''/g, '__') : text.replace(/\\./g, '__')).indexOf(single ? "'" : '"');
+
+function readQuoted({ state, raw, indent }) {
   const single = raw.startsWith("'");
-  const match = raw.match(single ? SINGLE_QUOTED : DOUBLE_QUOTED);
-  if (!match || !TRAILING.test(match[2])) unsupported();
-  return unquote(match[1], single);
+  const parts = [];
+  let segment = raw.slice(1);
+  let end = closingQuote(segment, single);
+  while (end === -1) {
+    parts.push(segment);
+    segment = continuationLine(state, indent);
+    end = closingQuote(segment, single);
+  }
+  if (!TRAILING.test(segment.slice(end + 1))) unsupported();
+  return unquote([...parts, segment.slice(0, end)].join(' '), single);
 }
 
 function readPlain({ state, raw, indent }) {
@@ -131,7 +167,7 @@ const VALUE_READERS = [
   [(raw) => raw === '' || raw.startsWith('#'), readNested],
   [(raw) => NODE_PROPERTY.test(raw), unsupported],
   [(raw) => BLOCK_SCALAR.test(raw), readBlockScalar],
-  [(raw) => /^[[{]/.test(raw), readFlow],
+  [(raw) => FLOW_START.test(raw), readFlow],
   [(raw) => /^['"]/.test(raw), readQuoted],
 ];
 
@@ -171,8 +207,12 @@ function parseSequence(state, indent) {
   return items;
 }
 
-function parseBlock(state, indent) {
-  return isSequenceEntry(peek(state).text) ? parseSequence(state, indent) : parseMapping(state, indent);
+function parseBlock(state, first, parentIndent) {
+  if (FLOW_START.test(first.text)) {
+    state.position += 1;
+    return readFlow({ state, raw: first.text, indent: parentIndent });
+  }
+  return isSequenceEntry(first.text) ? parseSequence(state, first.indent) : parseMapping(state, first.indent);
 }
 
 function skipDocumentStart(state) {
@@ -184,12 +224,14 @@ function skipDocumentStart(state) {
 function parseDocument(state) {
   skipDocumentStart(state);
   const first = peek(state);
-  const root = first ? parseBlock(state, first.indent) : null;
+  const root = first ? parseBlock(state, first, -1) : null;
   return peek(state) ? unsupported() : root;
 }
 
+const withoutByteOrderMark = (text) => (text.charCodeAt(0) === 0xfeff ? text.slice(1) : text);
+
 export function readYamlOutline(text) {
-  const state = { lines: text.replace(/^﻿/, '').split(/\r?\n/), position: 0 };
+  const state = { lines: withoutByteOrderMark(text).split(/\r?\n/), position: 0 };
   try {
     return parseDocument(state);
   } catch (error) {
