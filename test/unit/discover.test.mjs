@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 
+import { loadOpenapi } from '../../skills/ax-kit/scripts/lib/context/api-description.mjs';
+import { createContext } from '../../skills/ax-kit/scripts/lib/context/context.mjs';
 import { runCheckOn, statusOf } from '../fixtures/run-check.mjs';
-import { html, json, text } from '../fixtures/server.mjs';
+import { html, json, startSite, text } from '../fixtures/server.mjs';
 
 const SITEMAP = '<?xml version="1.0"?><urlset><url><loc>https://x.test/</loc></url></urlset>';
 const LLMS = '# Acme\n\n> Summary.\n\n## Docs\n\n- [Start](/start.md)\n- [API](/api.md)\n';
@@ -202,4 +204,16 @@ test('the A2A agent card needs a name and the supported interfaces', async () =>
 test('llms-full.txt is reported when it exists as text', async () => {
   assert.equal(await statusOf({ '/llms-full.txt': text('# All content') }, 'discover.llms-full-txt'), 'pass');
   assert.equal(await statusOf({ '/llms-full.txt': html('<!doctype html><html></html>') }, 'discover.llms-full-txt'), 'fail');
+});
+
+test('the scanner requests three announced API descriptions at most', async () => {
+  const hrefs = Array.from({ length: 10 }, (_, index) => ({ href: `/specs/${index}.json` }));
+  const site = await startSite({ '/.well-known/api-catalog': json({ linkset: [{ anchor: 'https://x.test', 'service-desc': hrefs }] }) });
+  try {
+    const openapi = await loadOpenapi(createContext({ target: site.origin, profile: 'api' }));
+    assert.equal(openapi.state, 'missing');
+    assert.deepEqual(site.hits.map((hit) => hit.path).filter((path) => path.startsWith('/specs/')), ['/specs/0.json', '/specs/1.json', '/specs/2.json']);
+  } finally {
+    await site.close();
+  }
 });

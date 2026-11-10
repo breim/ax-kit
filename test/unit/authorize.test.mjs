@@ -338,9 +338,9 @@ test('the OpenID Connect document gives the server metadata when no RFC 8414 doc
   assert.equal(await statusOf(routes, 'authorize.pkce-s256', API), 'pass');
 });
 
-test('the RFC 8414 document has priority over the OpenID Connect document', async () => {
+test('a member of the OpenID Connect document counts when the RFC 8414 document does not have it', async () => {
   const routes = { ...withServer(), [PROVIDER_PATH]: providerMetadata({ code_challenge_methods_supported: ['S256'] }) };
-  assert.equal(await statusOf(routes, 'authorize.pkce-s256', API), 'fail');
+  assert.equal(await statusOf(routes, 'authorize.pkce-s256', API), 'pass');
 });
 
 test('dynamic registration passes with a registration endpoint and fails without one', async () => {
@@ -581,4 +581,12 @@ test('the Authorize checks add 7 requests at most to one scan, with a hint or wi
   const hinted = { status: 401, headers: { 'www-authenticate': 'Bearer resource_metadata="/missing.json"' }, body: '' };
   assert.deepEqual(await addedRequests({ ...worstCaseSite, '/': hinted }), [...CHAIN_PATHS, '/missing.json'].sort());
   assert.deepEqual(await addedRequests(worstCaseSite), [...CHAIN_PATHS, '/items'].sort());
+});
+
+test('a dependent check uses the best result of the two valid metadata documents', async () => {
+  const both = (server, provider) => ({ [SERVER_PATH]: serverMetadata(server), [PROVIDER_PATH]: providerMetadata(provider) });
+  assert.equal(await statusOf(both({}, { scopes_supported: ['openid'] }), 'authorize.scopes', API), 'pass');
+  assert.equal(await statusOf(both({ scopes_supported: ['read'] }, {}), 'authorize.scopes', API), 'pass');
+  assert.equal(await statusOf(both({}, {}), 'authorize.scopes', API), 'fail');
+  assert.equal(await statusOf(both({}, { registration_endpoint: 'https://as.test/register' }), 'authorize.dynamic-registration', API), 'pass');
 });

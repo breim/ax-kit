@@ -4,6 +4,7 @@ import { linksWithRel, parseLinkHeader } from './link-header.mjs';
 
 const CATALOG_PATH = '/.well-known/api-catalog';
 const CATALOG_ACCEPT = 'application/linkset+json, application/json';
+const MAX_ANNOUNCED_DESCRIPTIONS = 3;
 
 export const CONVENTIONAL_PATHS = [
   '/openapi.json',
@@ -73,8 +74,8 @@ export function loadOpenapi(ctx) {
   return ctx.once('openapi', async () => {
     const catalog = await loadApiCatalog(ctx);
     const linked = await loadServiceDescLinks(ctx);
-    const found =
-      (await firstDescription(ctx, [...catalog.descriptions, ...linked])) ?? (await loadConventionalDescription(ctx));
+    const announced = [...catalog.descriptions, ...linked].slice(0, MAX_ANNOUNCED_DESCRIPTIONS);
+    const found = (await firstDescription(ctx, announced)) ?? (await loadConventionalDescription(ctx));
     if (!found) return { state: 'missing' };
     return { state: found.format === 'json' ? 'found' : 'yaml_only', ...found };
   });

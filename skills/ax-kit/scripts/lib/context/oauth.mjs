@@ -71,9 +71,7 @@ export const loadOidcDiscovery = (ctx) =>
 
 export function loadServerMetadata(ctx) {
   return ctx.once('oauthServerMetadata', async () => {
-    const server = await loadRfc8414(ctx);
-    if (server.valid) return server;
-    const provider = await loadOidcDiscovery(ctx);
-    return provider.valid ? provider : null;
+    const documents = [await loadRfc8414(ctx), await loadOidcDiscovery(ctx)];
+    return documents.filter((document) => document.valid);
   });
 }

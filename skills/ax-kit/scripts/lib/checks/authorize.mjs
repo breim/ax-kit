@@ -44,10 +44,18 @@ async function runProtectedResource(ctx) {
   return pass(`The protected resource metadata from ${source} names the authorization server ${found.servers[0]}.`, evidence);
 }
 
+const STATUS_RANK = { pass: 2, partial: 1, fail: 0 };
+
+const betterOf = (best, result) => (STATUS_RANK[result.status] > STATUS_RANK[best.status] ? result : best);
+
+// A server can publish RFC 8414 metadata and OpenID Connect metadata with different members.
+// An agent can read each of them, so the best result of the valid documents counts.
 const withMetadata = (assess) => async (ctx) => {
-  const server = await loadServerMetadata(ctx);
-  if (!server) return blocked('authorize.server-metadata', NO_METADATA);
-  return assess(server.document, [seen(server.snapshot, 'authorization server metadata')]);
+  const servers = await loadServerMetadata(ctx);
+  if (servers.length === 0) return blocked('authorize.server-metadata', NO_METADATA);
+  return servers
+    .map((server) => assess(server.document, [seen(server.snapshot, 'authorization server metadata')]))
+    .reduce(betterOf);
 };
 
 function assessPkce(metadata, evidence) {
