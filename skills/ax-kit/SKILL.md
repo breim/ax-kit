@@ -89,6 +89,9 @@ A profile tells the scanner which checks apply. Give the profile with `--profile
 A product can have more than one surface. Scan each surface with its own profile.
 Example: scan `example.com` as `content`, and scan `api.example.com` as `api`.
 
+For an API, give the base URL of the API, for example `https://example.com/api/v1`.
+The scanner looks for the API description at the well-known locations of the host and beside the base URL.
+
 ## How to read the scanner output
 
 The JSON report has three buckets of checks.

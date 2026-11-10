@@ -57,7 +57,7 @@ Recommend a stable standard as a requirement. Present an emerging standard as an
 |---|---|---|---|
 | OpenAPI 3 | Stable | <https://spec.openapis.org/oas/latest.html> | `openapi-quality` |
 | Model Context Protocol, revision `2026-07-28` | Stable | <https://modelcontextprotocol.io/specification/2026-07-28> | `mcp-server` |
-| WebMCP | Emerging. W3C Community Group draft, Chrome origin trial. | <https://webmachinelearning.github.io/webmcp/> | `webmcp` |
+| WebMCP | Emerging. W3C Community Group draft, with origin trials in Chrome and Edge. | <https://webmachinelearning.github.io/webmcp/> | `webmcp` |
 | `Idempotency-Key` header | Emerging. IETF draft. Many APIs use it. | <https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/> | `api-design` |
 
 ## Authorize
@@ -93,7 +93,7 @@ All the payment protocols for agents are emerging. Read the current specificatio
 | Universal Commerce Protocol (UCP) | <https://ucp.dev/specification/overview/> | `agentic-commerce` |
 | x402 | <https://github.com/x402-foundation/x402> | `agentic-commerce` |
 | Machine Payments Protocol (MPP) | <https://mpp.dev/protocol> | `agentic-commerce` |
-| Agent Payments Protocol (AP2) | <https://ap2-protocol.org/> | `agentic-commerce` |
+| Agent Payments Protocol (AP2). It has no discovery document. A UCP profile can declare it. | <https://ap2-protocol.org/> | `agentic-commerce` |
 
 ## Renamed and replaced
 

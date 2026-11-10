@@ -2,12 +2,12 @@
 
 - **Reviewed:** 2026-11
 - **Pillar:** Discover
-- **Checks (all Watch):** group `discover.mcp` = `discover.mcp-server-card`, `discover.ai-catalog`; `discover.agent-skills`; `discover.a2a-agent-card`; `discover.mcp-well-known` (legacy)
+- **Checks (all Watch):** group `discover.mcp` = `discover.mcp-server-card` and `discover.ai-catalog`, then `discover.agent-skills`, `discover.a2a-agent-card`, and `discover.mcp-well-known` (legacy)
 - **Templates:** `assets/server-card.json`, `assets/ai-catalog.json`, `assets/agent-skills-index.json`
 
 ## Why agents need it
 
-An agent that knows only a domain must find what the domain offers to agents: an MCP server, a set of skills, or an agent to talk to.
+An agent that knows only a domain must find what the domain offers to agents. That can be an MCP server, a set of skills, or an agent to talk to.
 Discovery documents answer that question at known locations, before the agent opens a connection.
 
 All the standards in this playbook are young. They are Watch checks: they do not change the AX Score.
