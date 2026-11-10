@@ -135,7 +135,7 @@ To help clients find the server, publish an MCP Server Card. Read [agent-discove
 ## Stack notes
 
 - **SDK:** use an official MCP SDK. Make sure that its release supports revision `2026-07-28`.
-- **Next.js:** `app/mcp/route.ts` with a `POST` handler. Export no `GET` handler, and the framework returns `405`.
+- **Next.js:** `app/mcp/route.ts` with a `POST` handler. Make sure that a `GET` request to the path returns `405`.
 - **Serverless and edge:** the stateless model fits. Do not keep protocol state in the memory of one instance.
 - **Reverse proxy:** turn off response buffering for the MCP path, or the client gets the SSE events late.
 

@@ -118,9 +118,9 @@ Then `act.openapi-valid` fails. A JSON version removes the problem.
 
 ## Stack notes
 
-- **FastAPI:** the framework serves `/openapi.json`. Set `operation_id`, `summary`, `response_model`, and `responses` on each route.
+- **FastAPI:** the framework serves `/openapi.json`. Set `operation_id` and `summary` on each route, and declare the response model and the error responses.
 - **Hono and Elysia:** generate the file from the route schemas. Give each route an explicit operation ID.
-- **Spring with springdoc:** the default JSON path is `/v3/api-docs`. Set the operation ID and the responses with the annotations.
+- **Spring with springdoc:** the default JSON path is `/v3/api-docs`. Set `operationId` in `@Operation`, and declare the responses with `@ApiResponse`.
 - **A YAML source file:** convert it to JSON in the build, and publish the JSON file.
 
 For other stacks, read [stacks.md](stacks.md).
