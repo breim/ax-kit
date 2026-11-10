@@ -105,6 +105,7 @@ The scanner is polite and read-only:
 - It sends a maximum of 80 requests, 2 at a time.
 - It uses `GET`, `HEAD`, and `OPTIONS`, and one read-only `POST` to find an MCP server.
 - It runs on `localhost` and on private staging hosts, so you can scan before a release.
+- Each request has the user-agent `ax-kit/<version>`. Two requests also have the published user-agent string of an AI agent before that name. They show how the site treats that agent.
 - It sends no telemetry.
 
 ## Standards change
