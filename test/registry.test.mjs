@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { PILLARS, PROFILES, TIER_WEIGHT } from '../skills/ax-kit/scripts/lib/model.mjs';
+import { MAX_UNIT_POINTS, PILLARS, PILLAR_WEIGHT, PROFILES, TIER_WEIGHT } from '../skills/ax-kit/scripts/lib/model.mjs';
 import { CHECKS, GROUPS } from '../skills/ax-kit/scripts/lib/registry.mjs';
+import { buildUnits } from '../skills/ax-kit/scripts/lib/scoring/units.mjs';
 
 const TIERS = [...Object.keys(TIER_WEIGHT), 'info'];
 const STABILITIES = ['stable', 'emerging', 'legacy'];
@@ -81,4 +82,46 @@ test('a gate is an essential, stable, measured check outside a group', () => {
   each(CHECKS.filter((check) => check.gate), (check, id) => {
     assert.deepEqual([check.tier, check.stability, check.evidence, check.group], ['essential', 'stable', 'measured', undefined], id);
   });
+});
+
+const unitsOf = (profile) => buildUnits({ checks: CHECKS, groups: GROUPS, results: [], profile });
+const inPillar = (units, pillar) => units.filter((unit) => unit.pillar === pillar);
+const weightOf = (units) => units.reduce((sum, unit) => sum + TIER_WEIGHT[unit.tier], 0);
+const SINGLE_UNIT_PILLARS = ['api:reach'];
+
+test('the pillar weights of each profile add up to 100', () => {
+  for (const profile of PROFILES) {
+    assert.equal(Object.values(PILLAR_WEIGHT[profile]).reduce((sum, weight) => sum + weight, 0), 100, profile);
+    assert.deepEqual(Object.keys(PILLAR_WEIGHT[profile]), PILLARS, profile);
+  }
+});
+
+test('a weighted pillar has two scored units or more, and a pillar with no weight has none', () => {
+  for (const profile of PROFILES) {
+    for (const pillar of PILLARS) {
+      const count = inPillar(unitsOf(profile), pillar).length;
+      const label = `${profile}:${pillar}`;
+      if (PILLAR_WEIGHT[profile][pillar] === 0) assert.equal(count, 0, label);
+      else if (SINGLE_UNIT_PILLARS.includes(label)) assert.equal(count, 1, label);
+      else assert.ok(count >= 2, `${label} has ${count} units`);
+    }
+  }
+});
+
+test('no scored unit is worth more than the point limit', () => {
+  for (const profile of PROFILES) {
+    const units = unitsOf(profile);
+    for (const unit of units) {
+      const points = (PILLAR_WEIGHT[profile][unit.pillar] * TIER_WEIGHT[unit.tier]) / weightOf(inPillar(units, unit.pillar));
+      assert.ok(points <= MAX_UNIT_POINTS, `${profile}: ${unit.id} is worth ${points.toFixed(2)} points`);
+    }
+  }
+});
+
+test('the product has two gates', () => {
+  assert.deepEqual(CHECKS.filter((check) => check.gate).map((check) => check.id), ['reach.plain-fetch', 'read.content-without-js']);
+});
+
+test('the registry has the units of the plan', () => {
+  assert.deepEqual(Object.fromEntries(PROFILES.map((profile) => [profile, unitsOf(profile).length])), { content: 19, api: 19, webapp: 33, commerce: 19 });
 });
