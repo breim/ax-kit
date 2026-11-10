@@ -1,0 +1,39 @@
+# robots.txt for <site name>
+# Replace each <placeholder>. Change each group to match the decision of the owner.
+
+# All clients that have no group of their own, for example search engines.
+# Content-Signal states the permitted uses: a search index, input to an AI answer, and AI training.
+User-agent: *
+Content-Signal: search=yes, ai-input=<yes|no>, ai-train=<yes|no>
+Allow: /
+Disallow: /<private-path>/
+
+# User-directed agents. Each one gets a page because a person asked for it.
+# A client reads only the group that has its token, so this group repeats the Disallow line.
+User-agent: ChatGPT-User
+User-agent: Claude-User
+User-agent: Perplexity-User
+Allow: /
+Disallow: /<private-path>/
+
+# AI search crawlers. They build the index for AI search results.
+User-agent: OAI-SearchBot
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+Allow: /
+Disallow: /<private-path>/
+
+# AI training crawlers. "Disallow: /" blocks training. Use "Allow: /" to permit it.
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: Google-Extended
+User-agent: CCBot
+User-agent: Applebot-Extended
+User-agent: Meta-ExternalAgent
+User-agent: Amazonbot
+Disallow: /
+
+# Optional, IETF AIPREF draft. Put this line in a group to state the same decision with the draft vocabulary.
+# Content-Usage: train-ai=<y|n>, ai-use=<y|n>, search=y
+
+Sitemap: https://<host>/sitemap.xml

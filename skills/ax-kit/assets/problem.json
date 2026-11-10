@@ -1,0 +1,13 @@
+{
+  "type": "https://<docs-host>/problems/<problem-name>",
+  "title": "<Short summary of the problem type. It is the same for each occurrence.>",
+  "status": 422,
+  "detail": "<What failed in this request, why it failed, and how to correct it.>",
+  "instance": "/requests/<request-id>",
+  "errors": [
+    {
+      "pointer": "#/<field-name>",
+      "detail": "<The rule that the value broke, and the valid values.>"
+    }
+  ]
+}
