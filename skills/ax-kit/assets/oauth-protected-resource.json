@@ -1,0 +1,8 @@
+{
+  "resource": "https://<api-host>",
+  "resource_name": "<API name>",
+  "authorization_servers": ["https://<issuer-host>"],
+  "scopes_supported": ["<resource>:read", "<resource>:write"],
+  "bearer_methods_supported": ["header"],
+  "resource_documentation": "https://<docs-host>/docs/api"
+}
