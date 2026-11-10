@@ -65,7 +65,7 @@ async function runStructuredData(ctx) {
   const doc = await loadEntryDoc(ctx);
   const types = [...new Set(doc.jsonLd.items.flatMap(nodesOf).flatMap(typesOf))];
   const blocks = doc.jsonLd.items.length + doc.jsonLd.invalid;
-  const evidence = [seen(doc.snapshot, `${blocks} JSON-LD blocks, ${types.length} types`)];
+  const evidence = [seen(doc.snapshot, `JSON-LD blocks: ${blocks}, types: ${types.length}`)];
   if (types.length > 0) return pass(`The entry page has JSON-LD with these types: ${types.slice(0, TYPES_IN_SUMMARY).join(', ')}.`, evidence);
   if (blocks > 0) return partial('The entry page has JSON-LD, but no item is valid JSON with an @type.', evidence);
   if (doc.meta['og:title'] && doc.meta['og:type']) return partial('The entry page has Open Graph tags, but no JSON-LD.', evidence);
