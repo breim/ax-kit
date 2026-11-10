@@ -8,7 +8,7 @@ import { watchChecks } from './reach-watch.mjs';
 import { blocked, fail, partial, pass, seen } from './result.mjs';
 
 const ACCESS_SUBJECTS = [...USER_DIRECTED_TOKENS, WILDCARD_AGENT];
-const POLICY_DIRECTIVES = ['content-signal', 'content-usage'];
+const POLICY_DIRECTIVES = ['Content-Signal', 'Content-Usage'];
 const ROBOTS_SPEC = 'https://www.rfc-editor.org/rfc/rfc9309';
 
 const isSuccess = (status) => status >= 200 && status < 300;
@@ -55,21 +55,28 @@ async function runUserAgentsAllowed(ctx) {
   return stopped.length === ACCESS_SUBJECTS.length ? fail(summary, evidence) : partial(summary, evidence);
 }
 
-function policyStatements(robots) {
+const directiveStatement = (directives) =>
+  directives.length === 1 ? `it has a ${directives[0]} directive` : `it has ${directives.join(' and ')} directives`;
+
+function policyOf(robots) {
   const named = AI_AGENT_TOKENS.filter((token) => robots.hasGroupFor(token));
-  const directives = POLICY_DIRECTIVES.filter((name) => robots.directive(name).length > 0);
-  return [...named.map((token) => `a group for ${token}`), ...directives.map((name) => `a ${name} directive`)];
+  const directives = POLICY_DIRECTIVES.filter((name) => robots.directive(name.toLowerCase()).length > 0);
+  const statements = [
+    ...(named.length > 0 ? [`it names ${named.length} of the known AI client tokens`] : []),
+    ...(directives.length > 0 ? [directiveStatement(directives)] : []),
+  ];
+  return { statements, observed: [...named, ...directives].join(', ') };
 }
 
 async function runBotPolicyExplicit(ctx) {
   const robots = await loadRobots(ctx);
   if (!robots.found) return blocked('reach.robots-txt', 'robots.txt is missing, so the site states no policy for AI agents.');
-  const statements = policyStatements(robots);
-  const evidence = [seen(robots.snapshot, statements.length > 0 ? statements.join(', ') : 'no AI policy')];
+  const { statements, observed } = policyOf(robots);
+  const evidence = [seen(robots.snapshot, observed || 'no AI policy')];
   if (statements.length === 0) {
     return partial('robots.txt names no AI agent and has no Content-Signal or Content-Usage directive.', evidence);
   }
-  return pass(`robots.txt states a policy for AI agents: ${statements.join(', ')}.`, evidence);
+  return pass(`robots.txt states a policy for AI agents: ${statements.join(', and ')}.`, evidence);
 }
 
 export const groups = [];
@@ -135,9 +142,9 @@ export const checks = [
     playbook: 'bot-access',
     rubric: {
       pass: 'The CDN or the WAF verifies agents by a Web Bot Auth signature or by a vendor list of verified bots. A verified agent gets the page with no challenge.',
-      partial: 'An allow rule exists for some agents, but it matches only the user-agent string, or it does not include all the agents that the owner wants.',
+      partial: 'An allow rule exists, but it matches only the user-agent string, or it does not include each agent that the owner permits.',
       fail: 'The bot protection challenges or blocks each automated client, and it has no rule for verified agents.',
-      evidence: 'The bot settings of the CDN or the WAF, the rule that allows verified agents, and the firewall log of one request from a verified agent.',
+      evidence: 'The bot settings of the CDN or the WAF, the rule that allows verified agents, and the log of one verified request.',
     },
   },
   ...watchChecks,

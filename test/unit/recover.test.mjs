@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { errorFormatOf, missingUrlBelow, serverUrlOf } from '../../skills/ax-kit/scripts/lib/context/api-error.mjs';
@@ -201,6 +202,12 @@ test('the error format reader never throws on a bad body', () => {
   assert.equal(errorFormatOf(snapshot('')), 'unstructured');
   assert.equal(errorFormatOf(snapshot('[]')), 'unstructured');
   assert.equal(errorFormatOf({ status: 404, headers: {}, body: '{"data":1}' }), 'unstructured');
+});
+
+test('the problem template is a problem details object for its own status', () => {
+  const template = readFileSync(new URL('../../skills/ax-kit/assets/problem.json', import.meta.url), 'utf8');
+  assert.equal(errorFormatOf(snapshot(template, 'application/problem+json', 422)), 'problem');
+  assert.equal(errorFormatOf(snapshot(template, 'application/problem+json', 404)), 'json');
 });
 
 test('the missing URL keeps the base path and removes the query', () => {

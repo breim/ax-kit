@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { TRAINING_CRAWLERS, USER_DIRECTED_AGENTS } from '../../skills/ax-kit/scripts/lib/context/ai-agents.mjs';
@@ -178,13 +179,26 @@ test('the access result is for the entry path and ignores the letter case of a t
 test('the bot policy passes for a group that names a training crawler, a search crawler, or a user-directed agent', async () => {
   for (const token of ['GPTBot', 'OAI-SearchBot', 'Claude-User', 'Bytespider']) {
     const result = await resultOf(robots(`User-agent: ${token}\nDisallow: /\n\n${OPEN}`), POLICY);
-    assert.deepEqual([result.status, result.summary], ['pass', `robots.txt states a policy for AI agents: a group for ${token}.`]);
+    assert.deepEqual([result.status, result.evidence[0].observed], ['pass', token]);
+    assert.equal(result.summary, 'robots.txt states a policy for AI agents: it names 1 of the known AI client tokens.');
   }
 });
 
 test('the bot policy passes for a Content-Signal directive or a Content-Usage directive', async () => {
-  assert.equal(await statusOf(robots('User-agent: *\nContent-Signal: ai-train=no\nAllow: /\n'), POLICY), 'pass');
-  assert.equal(await statusOf(robots('User-agent: *\nContent-Usage: train-ai=n\nAllow: /\n'), POLICY), 'pass');
+  const signal = await resultOf(robots('User-agent: *\nContent-Signal: ai-train=no\nAllow: /\n'), POLICY);
+  assert.deepEqual([signal.status, signal.summary], ['pass', 'robots.txt states a policy for AI agents: it has a Content-Signal directive.']);
+  const usage = await resultOf(robots('User-agent: *\nContent-Usage: train-ai=n\nAllow: /\n'), POLICY);
+  assert.deepEqual([usage.status, usage.summary], ['pass', 'robots.txt states a policy for AI agents: it has a Content-Usage directive.']);
+});
+
+test('the bot policy summary counts the named tokens and lists each directive', async () => {
+  const body = 'User-agent: GPTBot\nUser-agent: ClaudeBot\nDisallow: /\n\nUser-agent: *\nContent-Signal: ai-train=no\nContent-Usage: train-ai=n\nAllow: /\n';
+  const result = await resultOf(robots(body), POLICY);
+  assert.equal(
+    result.summary,
+    'robots.txt states a policy for AI agents: it names 2 of the known AI client tokens, and it has Content-Signal and Content-Usage directives.',
+  );
+  assert.equal(result.evidence[0].observed, 'GPTBot, ClaudeBot, Content-Signal, Content-Usage');
 });
 
 test('the bot policy is partial for a file that names no AI agent', async () => {
@@ -306,6 +320,16 @@ test('the reach checks send four requests: the entry page, robots.txt, and two b
   } finally {
     await site.close();
   }
+});
+
+const TEMPLATE = readFileSync(new URL('../../skills/ax-kit/assets/robots.txt', import.meta.url), 'utf8');
+
+test('the robots.txt template passes the reach checks and blocks only the training crawlers', async () => {
+  const filled = TEMPLATE.replaceAll('<yes|no>', 'no').replaceAll('<private-path>', 'private').replaceAll('<host>', 'x.test');
+  const routes = { ...HOME, ...robots(filled) };
+  for (const id of [ROBOTS, ALLOWED, POLICY, SIGNALS]) assert.equal(await statusOf(routes, id), 'pass', id);
+  const training = await resultOf(routes, TRAINING);
+  assert.equal(training.summary, `For AI training crawlers, robots.txt blocks ${TRAINING_CRAWLERS.join(', ')} and allows none.`);
 });
 
 test('a preference rule splits the optional path from the preferences', () => {
