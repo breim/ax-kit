@@ -1,6 +1,6 @@
 # AX Kit
 
-[![Test](https://github.com/breim/agent-experience/actions/workflows/test.yml/badge.svg)](https://github.com/breim/agent-experience/actions/workflows/test.yml)
+[![Test](https://github.com/breim/ax-kit/actions/workflows/test.yml/badge.svg)](https://github.com/breim/ax-kit/actions/workflows/test.yml)
 
 **UX is for humans. AX is for agents.**
 
@@ -11,7 +11,7 @@ It can use only what your product gives to a machine.
 AX Kit helps your coding agent build that layer. It implements the standards that agents use, and it measures the result with a scanner.
 
 ```bash
-npx skills add breim/agent-experience
+npx skills add breim/ax-kit
 ```
 
 The skill works with Claude Code, Codex, Cursor, Gemini CLI, and the other agents that the [skills CLI](https://skills.sh) supports.
@@ -90,8 +90,8 @@ Read [`scoring.md`](skills/ax-kit/references/scoring.md) for the model and [`che
 The scanner is one Node script with no dependencies. It needs Node.js 18 or later. You can run it without an agent.
 
 ```bash
-git clone https://github.com/breim/agent-experience.git
-node agent-experience/skills/ax-kit/scripts/ax.mjs scan https://example.com --profile content
+git clone https://github.com/breim/ax-kit.git
+node ax-kit/skills/ax-kit/scripts/ax.mjs scan https://example.com --profile content
 ```
 
 | Option | Purpose |

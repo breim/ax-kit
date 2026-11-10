@@ -1,5 +1,5 @@
 # AX Score gate. Replace each <placeholder>.
-# Guide: skills/ax-kit/references/ci.md in https://github.com/breim/agent-experience
+# Guide: skills/ax-kit/references/ci.md in https://github.com/breim/ax-kit
 name: AX Score
 
 on:
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 22
       - name: Get the scanner
-        run: git clone --depth 1 --branch "$AX_KIT_VERSION" https://github.com/breim/agent-experience.git "$RUNNER_TEMP/ax-kit"
+        run: git clone --depth 1 --branch "$AX_KIT_VERSION" https://github.com/breim/ax-kit.git "$RUNNER_TEMP/ax-kit"
       - name: Start the app
         run: |
           <install command>
@@ -49,6 +49,6 @@ jobs:
         with:
           node-version: 22
       - name: Get the scanner
-        run: git clone --depth 1 --branch "$AX_KIT_VERSION" https://github.com/breim/agent-experience.git "$RUNNER_TEMP/ax-kit"
+        run: git clone --depth 1 --branch "$AX_KIT_VERSION" https://github.com/breim/ax-kit.git "$RUNNER_TEMP/ax-kit"
       - name: Scan production
         run: node "$RUNNER_TEMP/ax-kit/skills/ax-kit/scripts/ax.mjs" scan <production url> --profile "$AX_PROFILE" --min-score "$AX_MIN_SCORE"
