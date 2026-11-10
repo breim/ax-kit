@@ -165,7 +165,7 @@ test('the llms.txt parser reads the title, the summary, the sections, and the li
 
 test('the llms.txt parser needs the H1 on the first line with content', () => {
   assert.equal(parseLlmsTxt('\n\n# Title').title, 'Title');
-  assert.equal(parseLlmsTxt('﻿# Title').title, 'Title');
+  assert.equal(parseLlmsTxt('\uFEFF# Title').title, 'Title');
   assert.equal(parseLlmsTxt('Intro\n# Title').title, null);
   assert.equal(parseLlmsTxt('## Not an H1').title, null);
   assert.equal(parseLlmsTxt('<!doctype html><html>').looksLikeHtml, true);

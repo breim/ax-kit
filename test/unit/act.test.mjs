@@ -207,7 +207,7 @@ test('all the Act checks on one context send one POST and add one request to a s
   }
 });
 
-test('a catalog with two description links makes the Act checks add three requests to a scan', async () => {
+test('the Act checks add only the MCP request when other pillars already read the API description', async () => {
   const catalog = { linkset: [{ anchor: '/v1', 'service-desc': [{ href: '/specs/v1.yaml' }, { href: '/specs/v1.json' }] }] };
   const routes = {
     '/': html('<!doctype html><html></html>'),
@@ -220,8 +220,9 @@ test('a catalog with two description links makes the Act checks add three reques
   const others = await hitsOf(routes, CHECKS.filter((check) => !isAct(check)), 'api');
   const pathsOf = (hits) => hits.map((hit) => `${hit.method} ${hit.path}`);
   const added = pathsOf(all.hits).filter((hit) => !pathsOf(others.hits).includes(hit));
-  assert.deepEqual(added.sort(), ['GET /specs/v1.json', 'GET /specs/v1.yaml', 'POST /mcp']);
-  assert.equal(all.hits.length - others.hits.length, 3);
+  assert.deepEqual(added, ['POST /mcp']);
+  assert.equal(all.hits.length - others.hits.length, 1);
+  assert.deepEqual(pathsOf(all.hits).filter((hit) => hit.includes('/specs/')).sort(), ['GET /specs/v1.json', 'GET /specs/v1.yaml']);
   assert.equal(all.results.find((result) => result.id === 'act.openapi-valid').status, 'pass');
 });
 

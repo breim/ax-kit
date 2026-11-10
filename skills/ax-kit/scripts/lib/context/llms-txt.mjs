@@ -2,7 +2,7 @@ const MARKDOWN_LINK = /\[([^\]]+)\]\(([^)\s]+)\)/g;
 const MARKDOWN_TARGET = /\.(md|mdx|txt)([?#].*)?$/i;
 
 export function parseLlmsTxt(source) {
-  const text = source.replace(/^﻿/, '');
+  const text = source.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/);
   const firstLine = lines.find((line) => line.trim() !== '') ?? '';
   const links = [...text.matchAll(MARKDOWN_LINK)].map(([, name, url]) => ({ name, url }));
